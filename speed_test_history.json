@@ -1,0 +1,47 @@
+[
+  {
+    "download_speed": 6.75,
+    "upload_speed": 23.53,
+    "ping": 87,
+    "status": "Completed",
+    "error": null,
+    "timestamp": "2025-06-14T21:04:43.825345",
+    "date": "2025-06-14 21:04:43"
+  },
+  {
+    "download_speed": 4.84,
+    "upload_speed": 22.04,
+    "ping": 101,
+    "status": "Completed",
+    "error": null,
+    "timestamp": "2025-06-14T21:05:27.877469",
+    "date": "2025-06-14 21:05:27"
+  },
+  {
+    "download_speed": 10.07,
+    "upload_speed": 0.45,
+    "ping": 92,
+    "status": "Completed",
+    "error": null,
+    "timestamp": "2025-06-14T21:12:23.786255",
+    "date": "2025-06-14 21:12:23"
+  },
+  {
+    "download_speed": 6.8,
+    "upload_speed": 0.44,
+    "ping": 61,
+    "status": "Completed",
+    "error": null,
+    "timestamp": "2025-06-14T21:14:13.604158",
+    "date": "2025-06-14 21:14:13"
+  },
+  {
+    "download_speed": 23.05,
+    "upload_speed": 1.13,
+    "ping": 41,
+    "status": "Completed",
+    "error": null,
+    "timestamp": "2025-06-14T21:31:08.576491",
+    "date": "2025-06-14 21:31:08"
+  }
+]

@@ -1,0 +1,18 @@
+# Programming Tools Version Checker Requirements
+
+# Core dependencies
+psutil>=5.8.0  # Required for Hardware Information Viewer (system monitoring) and Startup Manager
+
+# Standard library modules used (no installation required):
+# - tkinter (GUI framework)
+# - subprocess (process management)
+# - threading (background operations)
+# - json (data serialization)
+# - datetime (timestamp handling)
+# - platform (system information)
+# - os, sys, re (system utilities)
+
+# For development and testing
+# pytest>=7.0.0
+# black>=22.0.0
+# flake8>=4.0.0

@@ -1,0 +1,359 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- **RAM Usage Monitor and Cleaner**: New system monitoring feature in left sidebar
+  - Real-time RAM usage display with percentage and GB values
+  - Visual progress bar with color-coded usage levels (green/orange/red)
+  - One-click memory cache clearing functionality
+  - Auto-refresh every 5 seconds with manual refresh option
+  - Accessible via Tools menu and dedicated sidebar button
+  - Comprehensive memory information including total, used, and free RAM
+- **Internet Speed Tester**: Built-in network speed testing functionality
+  - Download speed testing using multiple reliable test servers with different file sizes
+  - Upload speed testing using HTTP POST requests to public APIs (httpbin.org, postman-echo.com)
+  - Intelligent fallback: estimates upload as 15% of download if upload test fails
+  - Ping latency testing to Google DNS (8.8.8.8)
+  - Real-time progress tracking during tests
+  - Automatic results history saving (last 50 tests)
+  - Historical results viewer with sortable data
+  - Clear history functionality with confirmation
+  - Accessible via Tools menu and dedicated sidebar button
+  - JSON-based history storage for data persistence
+  - Fixed upload/download speed ratio issue (download should be higher than upload)
+- **Codebase Cleanup**: Removed unused test and demo files for cleaner project structure
+  - Removed 30+ test files (test_*.py, demo_*.py, debug_*.py)
+  - Removed unused JSON data files (a.json, dd.json, backup.json, versions.json)
+  - Removed development files (aug_versions.sln, package.json, package-lock.json)
+  - Cleaned up __pycache__ directory
+  - Maintained only core application files and documentation
+- **Enhanced Internet Speed Test**: Improved accuracy for high-speed connections
+  - Added support for larger test files (50MB, 100MB) for better accuracy
+  - Implemented parallel downloads using ThreadPoolExecutor
+  - Added multiple CDN servers including Cloudflare for better global coverage
+  - Improved upload testing with larger payloads (1MB, 2MB, 5MB)
+  - Better speed calculation using proper Mbps conversion (1000-based)
+  - Enhanced timeout handling and error recovery
+- **Network Connection Monitor**: New comprehensive network monitoring tool
+  - Real-time display of all active network connections and listening ports
+  - Process identification with PID, name, and full executable path
+  - Color-coded connections (listening ports in green, external connections in yellow)
+  - Kill process functionality with confirmation dialog for suspicious processes
+  - Export capabilities to both JSON and text formats with timestamps
+  - Automatic refresh and manual refresh options
+  - Malware detection assistance by identifying unusual network behavior
+  - Accessible via Tools menu and dedicated sidebar button
+- **Enhanced Export Functionality**: Improved file export with user control
+  - File dialog to choose custom save location and filename
+  - Enhanced text export format with process grouping and better readability
+  - Improved JSON export with metadata and structured information
+  - Summary statistics including connection states and external connections
+  - UTF-8 encoding support for international characters
+  - User-friendly error handling and cancellation support
+- **Fixed Export Functionality**: Resolved export failures and improved reliability
+  - Enhanced data parsing with robust error handling for malformed addresses
+  - Fixed permission and file path error handling with specific error messages
+  - Improved data validation to prevent export failures from incomplete data
+  - Added safe type conversion for process IDs and port numbers
+  - Better handling of edge cases (empty addresses, invalid ports, missing data)
+- **Fixed File Dialog Error**: Resolved "bad option initialname" error in export functionality
+  - Changed `initialname` parameter to correct `initialfile` parameter in file dialog
+  - Added fallback error handling for file dialog failures
+  - Enhanced export reliability with graceful error recovery
+- **Windows Service Manager**: Comprehensive service management with advanced system configuration
+  - Complete service listing with sortable columns (Name, Display Name, Status, Startup Type, Category, Description)
+  - Real-time service control (Start/Stop/Restart) with administrator privilege checking
+  - Color-coded service categories (Critical=Red, Essential=Orange, Security=Green, etc.)
+  - Service dependency checking with warnings before stopping critical services
+  - Advanced search and filtering by name, status, and category
+  - Windows Update Management with security warnings and toggle functionality
+  - Hyper-V Management with enable/disable capabilities and restart notifications
+  - Service export functionality to JSON/Text with customizable options
+  - Safety features including critical service warnings and dependency alerts
+  - Administrator privilege detection and enforcement for service operations
+  - Accessible via Tools menu and dedicated "🔧 Service Manager" sidebar button
+- **Fixed Service Manager Loading Issue**: Resolved service enumeration problems
+  - Replaced complex PowerShell commands with reliable sc command implementation
+  - Added multiple fallback methods (sc command → PowerShell → minimal list)
+  - Improved error handling and debugging output for service loading
+  - Enhanced service parsing with better status and display name extraction
+  - Now successfully loads 300+ Windows services reliably across different system configurations
+- **Dynamic Windows Update & Hyper-V Buttons**: Smart context-aware button behavior
+  - Windows Update button automatically shows "Enable" or "Disable" based on current service status
+  - Hyper-V button dynamically changes to "Enable" or "Disable" based on Windows feature status
+  - Real-time status checking using reliable sc command and DISM for accurate state detection
+  - Automatic button updates after successful operations to reflect new status
+  - Enhanced error handling with fallback methods for status detection
+  - Refresh status buttons to manually update current state when needed
+- **Automatic Administrator Privilege Management**: Seamless elevation for system operations
+  - Application automatically requests administrator privileges on startup when needed
+  - Smart privilege checking with automatic restart elevation using Windows UAC
+  - User-friendly dialogs offering to restart as administrator when required
+  - Enhanced error messages explaining why administrator privileges are needed
+  - Included run_as_admin.bat file for easy administrator mode launching
+  - Graceful handling of privilege elevation failures with helpful guidance
+- **Hardware Information Viewer**: Comprehensive system hardware analysis and reporting
+  - **Complete Hardware Scanning**: Detailed information about CPU, Memory, GPU, Storage, Battery, and System
+  - **Real-time Data Collection**: Live CPU usage, memory usage, and battery status monitoring
+  - **Smart Hardware Detection**: Uses Windows WMI and PowerShell for accurate hardware identification
+  - **Organized Display**: Clean, categorized layout with expandable sections for each hardware component
+  - **Export Functionality**: Save hardware reports in JSON (structured data) or Text (human-readable) formats
+  - **Progress Tracking**: Visual progress bar during hardware information collection
+  - **Error Handling**: Graceful handling of hardware detection failures with clear error messages
+  - **Scrollable Interface**: Accommodates large amounts of hardware data with smooth scrolling
+  - **Accessible from Menu**: Available in Tools menu and main sidebar as "💻 Hardware Info"
+  - **Administrator Integration**: Works seamlessly with existing privilege management system
+- **Hardware Info Export Fix**: Resolved file dialog issues and improved user experience
+  - **Fixed File Dialog**: Corrected `initialname` parameter to `initialfile` for proper dialog display
+  - **Enhanced Error Handling**: Added comprehensive error messages and debugging output
+  - **Improved Layout**: Removed white canvas background and made content full-width
+  - **Better User Feedback**: Clear success/failure messages with file path confirmation
+  - **Desktop Default**: File dialogs now default to Desktop folder for easy access
+  - **Debug Output**: Added console logging for troubleshooting export operations
+- **Startup Manager**: Comprehensive Windows startup program management and optimization
+  - **Multi-Location Scanning**: Detects startup programs from Registry (HKCU/HKLM Run), Startup folders, Windows Services, and Scheduled Tasks
+  - **Detailed Program Information**: Shows program name, publisher, description, file path, startup impact rating, and system critical status
+  - **Impact Analysis**: Color-coded impact levels (High/Medium/Low) with boot time improvement estimates
+  - **Individual Controls**: Enable/disable startup programs with one-click toggle functionality
+  - **Bulk Operations**: Select multiple programs for simultaneous enable/disable operations
+  - **Safety Features**: System critical program protection with confirmation dialogs for dangerous operations
+  - **Backup & Restore**: Automatic backup creation before making changes with restore capabilities
+  - **Advanced Filtering**: Search by name/description, filter by impact level or startup location
+  - **Boot Time Optimization**: Real-time estimation of boot time improvements from disabled programs
+  - **Export Functionality**: Save startup configurations in JSON (structured) or Text (readable) formats
+  - **Professional Interface**: Sortable table view with progress indicators and status updates
+  - **Administrator Integration**: Seamless integration with existing privilege management system
+  - **Accessible from Menu**: Available in Tools menu and main sidebar as "🚀 Startup Manager"
+- **Smart Filtering System**: Enhanced startup manager to focus only on manageable programs
+  - **System Protection**: Automatically excludes Windows system-critical components (Explorer, Services, Security, etc.)
+  - **Third-Party Focus**: Only shows programs from known software vendors that can be safely disabled
+  - **Manageable Categories**: Includes productivity software, media players, communication apps, games, and utilities
+  - **Service Filtering**: Excludes essential Windows services while showing manageable third-party services
+  - **Safety First**: Prevents accidental disabling of components required for system stability
+  - **Reduced Clutter**: Eliminates hundreds of system entries to focus on programs that matter
+  - **Performance Impact**: Shows only programs that actually affect boot time and system performance
+  - **User-Friendly**: Simplified interface without overwhelming technical system components
+- **Comprehensive Startup Visibility**: Enhanced to show all startup programs with selective service protection
+  - **Complete Program Display**: Shows ALL startup programs from Registry, Folders, Services, and Tasks
+  - **Selective Service Protection**: Excludes only truly critical Windows services (RPC, LSASS, DHCP, etc.)
+  - **Smart Categorization**: Marks Windows components as critical while allowing visibility and management
+  - **Full User Control**: Users can see and manage all non-critical startup items including Windows programs
+  - **Safety Warnings**: Critical programs marked with 🛡️ icon and require confirmation before disabling
+  - **Comprehensive Coverage**: Includes third-party software, Windows utilities, and manageable system programs
+  - **Balanced Approach**: Maximum visibility with essential service protection for optimal user experience
+- **Status Tracking Fix**: Resolved issue where disabled programs appeared as enabled after refresh
+  - **Real-time Status Detection**: Scanning now checks actual enabled/disabled state of startup items
+  - **Registry Status Checking**: Detects disabled registry entries (renamed with _DISABLED suffix)
+  - **Folder Status Checking**: Identifies disabled startup folder items (.disabled extension)
+  - **Service Status Checking**: Verifies automatic vs manual startup configuration for services
+  - **Task Status Checking**: Confirms enabled vs disabled state for scheduled tasks
+  - **Persistent Display**: Refresh operations now preserve and show correct disabled status
+  - **Accurate Feedback**: Users see true current state of all startup programs after changes
+- **Enhanced Visual Display**: Improved disabled program visibility with red text and clear status labels
+  - **Red Text for Disabled**: Disabled startup programs now appear in red color for immediate visual identification
+  - **Clear Status Text**: Status column shows plain "Disabled" or "Enabled" text instead of emoji symbols
+  - **Color Tag System**: Implemented treeview color tags for consistent red/black text formatting
+  - **Visual Distinction**: Easy to distinguish between enabled (black) and disabled (red) programs at a glance
+  - **Status Counter**: Header shows count of enabled vs disabled programs (e.g., "Found 45 programs (38 enabled, 7 disabled)")
+  - **Persistent Colors**: Red coloring maintained through refresh operations and filtering
+  - **Accessibility**: Clear visual indicators improve usability for all users
+- **Complete Clean Implementation**: Rebuilt Startup Manager from scratch with modern, focused functionality
+  - **Clean Codebase**: Removed legacy filtering methods and simplified scanning logic for better maintainability
+  - **Double-Click Toggle**: Double-click any startup program to instantly enable/disable it with confirmation dialogs
+  - **Red Disabled Display**: Disabled programs appear in red text with "Disabled" status for immediate visual identification
+  - **Comprehensive Coverage**: Shows ALL startup programs from Registry, Folders, Services, and Tasks with selective protection
+  - **Smart Protection**: Only excludes truly critical Windows services (RPC, LSASS, DHCP) while showing everything else
+  - **Critical Marking**: Windows components marked with 🛡️ icon and require confirmation before disabling
+  - **Real-time Status**: Accurate enabled/disabled status detection that persists through refresh operations
+  - **Professional Interface**: Clean, business-standard display with clear status indicators and color coding
+- **Fixed Enable/Disable Issues**: Resolved "unable to enable or disable" errors with improved management logic
+  - **Manageable Items Only**: Only shows programs and services that can actually be enabled/disabled
+  - **Pre-validation**: Tests accessibility and permissions before displaying items to prevent errors
+  - **Fixed Registry Handling**: Improved registry key detection for User vs System locations
+  - **Enhanced Service Management**: Better service name resolution from display names
+  - **Automatic Scanning**: Startup Manager automatically scans when opened for immediate results
+  - **Error Prevention**: Filters out inaccessible or protected items that would cause enable/disable failures
+  - **Reliable Operations**: All displayed items are guaranteed to be manageable without permission errors
+- **Hidden Command Prompts**: Fixed command prompt windows appearing during system operations
+  - **Invisible Operations**: All subprocess calls now use CREATE_NO_WINDOW flag to hide command prompts
+  - **Clean User Experience**: No more flashing black windows during startup scanning or service management
+  - **Professional Appearance**: Seamless background operations without visual interruptions
+  - **System Integration**: PowerShell and command line operations run silently in background
+- **Auto-Scan Features**: Enhanced user experience with automatic scanning capabilities
+  - **Startup Manager Auto-Scan**: Automatically scans startup programs when dialog opens
+  - **Hardware Info Auto-Check**: Automatically collects hardware information when viewer opens
+  - **Immediate Results**: No need to manually click scan buttons for instant information access
+  - **Time-Saving**: Eliminates extra clicks and provides immediate system insights
+- **UI Polish**: Fixed visual issues and improved interface appearance
+  - **Button Focus Fix**: Removed blue focus line from Startup Manager button using takefocus=False
+  - **Clean Button Appearance**: Professional button styling without distracting focus indicators
+  - **Consistent Interface**: Uniform button behavior across all application components
+- **Simplified Windows Update Dialog**: Complete redesign for better usability
+  - **Single Smart Button**: Shows "Enable" when disabled, "Disable" when enabled
+  - **Clean Interface**: Removed complex dual-button layout that was causing visibility issues
+  - **Reliable Status Detection**: Simplified status checking with clear feedback
+  - **Guaranteed Visibility**: Button is always visible and functional
+  - **Simple Logic**: If Windows Update is disabled → shows "✅ Enable Windows Update"
+  - **Simple Logic**: If Windows Update is enabled → shows "❌ Disable Windows Update"
+  - **Immediate Feedback**: Status updates immediately after operations
+  - **Compact Design**: Smaller, cleaner dialog (400x250) focused on essential functionality
+- Initial project structure with multiple language implementations
+- C# WinForms application for version checking
+- Python CLI version checker
+- Node.js web-based version checker
+- Go CLI version checker
+- Rust CLI version checker
+- **Comprehensive Package Management System**:
+  - PackageManager class with multi-source scanning capabilities
+  - PackageInfo data structure with detailed package metadata
+  - Support for Windows Programs, npm, pip, Chocolatey, .NET Tools, System Tools
+  - Smart installation/uninstallation system with progress tracking
+  - Enhanced TreeView display with color-coded package status
+  - Bulk package operations (Install All Missing, Update All Outdated)
+  - Advanced export functionality (JSON/Text with complete inventory)
+  - Manual installation guidance with clipboard integration
+  - Package filtering, search, and dependency tracking capabilities
+
+### Changed
+- **BREAKING**: Removed login functionality from C# application
+- Redesigned C# application with modern left sidebar navigation inspired by Podman Desktop
+- Replaced top menu bar with left sidebar containing all functionality
+- Updated color scheme to modern dark theme
+- Improved UI layout with dedicated content areas for different views
+- Enhanced button styling with hover effects and modern flat design
+- Added custom title bar with minimize, maximize, and close buttons
+- Improved welcome message with detailed instructions and feature overview
+- Enhanced sidebar organization with section labels (MAIN, TOOLS, OTHER)
+- Added tooltips to sidebar buttons for better user experience
+- Improved button spacing and visual hierarchy
+- Fixed layout positioning to prevent content overlap with title bar
+- Corrected content panel positioning to avoid sidebar overlap
+- Enhanced responsive design with proper anchoring and resize handling
+- Fixed black overlay issue preventing action button clicks
+- Improved button layering with BringToFront() calls
+- Adjusted label sizing to prevent overlap with action buttons
+- Fixed sidebar menu positioning to prevent overlap with title bar
+- Removed duplicate app title from sidebar (now only in main title bar)
+- Improved sidebar navigation spacing and layout
+- **Comprehensive Development Tools Management System**:
+  - **Expanded Tool Coverage**: 100+ programming languages, frameworks, IDEs, and tools
+  - **Programming Languages**: Python, Node.js, PHP, Java, .NET, Go, Rust, Ruby, Kotlin, Scala, Swift, Dart, Perl, Lua, R
+  - **IDEs & Editors**: VS Code, Cursor, Windsurf, PhpStorm, WebStorm, IntelliJ IDEA, PyCharm, Atom, Sublime Text, Vim, Emacs, Notepad++
+  - **Package Managers**: npm, npx, yarn, pnpm, pip, pipenv, poetry, conda, composer, cargo, gem, bundler, maven, gradle
+  - **Web Frameworks**: Angular, React, Vue, Next.js, Nuxt.js, Svelte, Express, NestJS, Gatsby, Webpack, Vite, Parcel, Rollup
+  - **Backend Frameworks**: Django, Flask, FastAPI, Laravel, Symfony, Ruby on Rails, Spring Boot
+  - **Database Tools**: MySQL, PostgreSQL, MongoDB, Redis, SQLite
+  - **DevOps & Cloud**: Docker, Kubernetes, Helm, Terraform, Ansible, Vagrant, AWS CLI, Azure CLI, Google Cloud CLI
+  - **Testing Tools**: Jest, Mocha, Cypress, Playwright, pytest, PHPUnit
+  - **Linting & Formatting**: ESLint, Prettier, TSLint, Stylelint, Black, Flake8, Pylint
+  - **Mobile Development**: Flutter, Ionic, Cordova, React Native
+  - **Other Tools**: Git, SVN, Mercurial, cURL, Wget, jq, Postman, Insomnia, PowerShell, Bash, Zsh
+  - **Organized Category Display**: Tools grouped into logical categories with counts
+    - 🐍 Programming Languages (15 tools)
+    - 💻 IDEs & Editors (12 tools)
+    - 📦 Package Managers (19 tools)
+    - 🌐 Web Development (13 tools)
+    - 🚀 Backend Frameworks (7 tools)
+    - 🗄️ Database Tools (5 tools)
+    - ☁️ DevOps & Cloud (9 tools)
+    - 🧪 Testing Tools (6 tools)
+    - ✨ Linting & Formatting (7 tools)
+    - 📱 Mobile Development (4 tools)
+    - 📚 Version Control (3 tools)
+    - 🌐 Web Servers (3 tools)
+    - 🛠️ Other Tools (8 tools)
+  - Simple format: Tool Name - Version - Location [Install button if needed]
+  - Improved button positioning to prevent overlap with content
+  - Streamlined action buttons: "🔍 Scan Tools", "📄 JSON", "📝 Text"
+  - Color-coded status: Green for installed, Red for missing tools
+  - Smart installation commands for different package managers (choco, npm, pip, gem, composer)
+  - Expandable categories for better organization and navigation
+  - **Enhanced Detection System**:
+    - Multi-layered detection: Command-line → Registry → Common paths → Special detection
+    - Robust VS Code detection with multiple installation path checks
+    - JetBrains IDEs detection (PhpStorm, WebStorm, IntelliJ, PyCharm)
+    - Alternative command detection (python/python3/py, java with JAVA_HOME)
+    - Registry-based detection for Windows applications
+    - File version extraction for executables without version commands
+    - Fallback detection methods for tools not in system PATH
+    - Improved accuracy for installed tools previously showing as "Not Installed"
+  - **Fixed Scanning Issues**:
+    - Prevented executables from launching during scan (fixed Cursor.exe opening issue)
+    - Safe version detection using file properties instead of running applications
+    - Added safety checks for version commands to avoid launching IDEs/editors
+  - **Smart Install Button System**:
+    - 📦 Install: For tools that can be auto-installed via package managers
+    - 📋 Manual: For tools requiring manual installation (IDEs, special software)
+    - ⚠️ N/A: For tools that come bundled with parent tools (npm with Node.js, pip with Python)
+    - Context-aware installation methods based on tool capabilities
+    - Enhanced manual installation dialog with Chocolatey command options
+  - **Modern Installation Dialog**:
+    - Professional installation interface with dark theme consistency
+    - Real-time progress bar and status updates during installation
+    - Live command output display in scrollable text area
+    - Interactive cancel button to abort installation process
+    - Modal dialog preventing main window interaction during installation
+    - Rounded corners and modern UI design matching application theme
+    - Success/failure indicators with appropriate color coding
+    - Automatic dialog closure on completion with confirmation
+    - Proper error handling and informative error messages
+    - Command display showing exactly what's being executed
+  - **Individual Package Install Buttons**:
+    - Modern install buttons beside each package in the right side
+    - Color-coded action buttons: Blue "📦 Install", Yellow "📋 Manual", Gray "⚠️ N/A"
+    - Hover effects and proper button styling matching application theme
+    - Working click functionality that triggers installation dialog
+    - Button state management (disabled during installation, hidden after success)
+    - Custom scrollable panel layout replacing TreeView for better control embedding
+    - Proper button positioning and responsive layout
+    - Category-based organization with modern panel design
+  - **Fixed Blank Page Issue**:
+    - Resolved blank page display when clicking scan button
+    - Fixed panel container hierarchy for proper content display
+    - Corrected package panel positioning within main content area
+    - Added null checks and fallback handling for empty package database
+    - Improved responsive layout with proper anchoring and sizing
+
+### Removed
+- Login form and authentication system
+- Top menu bar navigation
+- LoginForm.cs file
+
+### Features
+- **Comprehensive Package Management System**:
+  - 📱 Apps & Versions - Universal package control center
+  - Multi-source package detection: Windows Programs, npm, pip, Chocolatey, .NET Tools, System Tools
+  - Smart installation system with automatic and manual installation support
+  - Color-coded package status (Green=Installed, Red=Missing, Orange=Outdated, Gray=Unknown)
+  - Individual package install/uninstall with double-click functionality
+  - Bulk operations: "Install All Missing", "Update All Outdated"
+  - Package details: version, install date, size, file location, dependencies
+  - Enhanced export functionality with complete package inventory
+
+- **Advanced Package Features**:
+  - Auto-installable packages via npm, pip, chocolatey, dotnet tools
+  - Manual installation guidance with copy-to-clipboard instructions
+  - Package filtering and search capabilities
+  - Dependency tracking and conflict detection
+  - Progress indicators for installation/uninstallation processes
+  - Package size and installation date tracking
+
+- **Legacy Features**:
+  - Browser backup and restore capabilities
+  - System cleanup tools
+  - Modern UI with dark theme support
+  - Cross-platform compatibility
+
+- **Navigation Structure**:
+  - 📱 Apps & Versions (comprehensive package management)
+  - 📦 Install Tools (auto-install missing packages)
+  - 🌐 Browser Backup (backup/restore browser data)
+  - 🛠️ System Tools (PC cleanup and programs)
+  - 📄 Export (export complete package inventory)
+  - ⚙️ Settings (application preferences)
