@@ -75,8 +75,12 @@ class StartupScanner:
             self._scan_startup_services()
 
             if progress_callback:
-                progress_callback("Scanning scheduled tasks...", 80)
+                progress_callback("Scanning scheduled tasks...", 70)
             self._scan_scheduled_tasks()
+
+            if progress_callback:
+                progress_callback("Scanning UWP/Microsoft Store apps...", 80)
+            self._scan_uwp_apps()
 
             if progress_callback:
                 progress_callback("Analyzing startup impact...", 90)
@@ -96,21 +100,38 @@ class StartupScanner:
         if not self.is_windows:
             return
 
-        # Registry locations to scan
+        # Registry locations to scan (comprehensive Task Manager coverage)
         registry_locations = [
+            # Traditional startup locations
             (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", "Registry (User)"),
             (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run", "Registry (System)"),
             (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\RunOnce", "Registry (User Once)"),
             (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\RunOnce", "Registry (System Once)"),
+
+            # Windows 10/11 Task Manager startup locations
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run", "Windows Startup (User)"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run", "Windows Startup (System)"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32", "Windows Startup (User 32-bit)"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32", "Windows Startup (System 32-bit)"),
+
+            # Additional Task Manager locations
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run", "Registry (System WOW64)"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\RunOnce", "Registry (System WOW64 Once)"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\RunServices", "Registry (User Services)"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\RunServices", "Registry (System Services)"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\RunServicesOnce", "Registry (User Services Once)"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\RunServicesOnce", "Registry (System Services Once)"),
         ]
 
         for hkey, subkey, location_name in registry_locations:
             try:
-                # Scan enabled entries
-                self._scan_registry_key(hkey, subkey, location_name, enabled=True)
-
-                # Scan disabled entries (with _DISABLED suffix)
-                self._scan_registry_key(hkey, subkey, location_name, enabled=False)
+                # Handle Windows StartupApproved registry differently
+                if "StartupApproved" in subkey:
+                    self._scan_startup_approved_registry(hkey, subkey, location_name)
+                else:
+                    # Traditional registry scanning
+                    self._scan_registry_key(hkey, subkey, location_name, enabled=True)
+                    self._scan_registry_key(hkey, subkey, location_name, enabled=False)
 
             except Exception as e:
                 print(f"Error scanning registry {location_name}: {e}")
@@ -152,9 +173,13 @@ class StartupScanner:
                             description=description
                         )
 
+                        # Set registry information for proper enable/disable functionality
                         startup_item.registry_key = subkey
-                        startup_item.registry_value = display_name
+                        startup_item.registry_value = display_name  # Use the cleaned name for display
                         startup_item.is_system_critical = self._is_critical_windows_component(display_name, exe_path)
+
+                        # Store the actual registry value name for operations
+                        startup_item._actual_registry_value = name  # Store the actual name (with or without _DISABLED)
 
                         # Only add if it's manageable
                         if self._is_manageable_item(startup_item):
@@ -166,7 +191,84 @@ class StartupScanner:
 
         except Exception as e:
             print(f"Error scanning registry key {subkey}: {e}")
-    
+
+    def _scan_startup_approved_registry(self, hkey, subkey, location_name):
+        """Scan Windows StartupApproved registry entries (Windows 10/11 Task Manager format)."""
+        try:
+            # First, get the corresponding Run registry to get the actual commands
+            run_key = subkey.replace("StartupApproved\\", "")
+
+            # Get startup items from the Run registry
+            run_items = {}
+            try:
+                with winreg.OpenKey(hkey, run_key) as run_registry:
+                    i = 0
+                    while True:
+                        try:
+                            name, value, reg_type = winreg.EnumValue(run_registry, i)
+                            run_items[name] = value
+                            i += 1
+                        except OSError:
+                            break
+            except Exception:
+                pass  # Run registry might not exist
+
+            # Now scan the StartupApproved registry for enable/disable status
+            with winreg.OpenKey(hkey, subkey) as key:
+                i = 0
+                while True:
+                    try:
+                        name, value, reg_type = winreg.EnumValue(key, i)
+
+                        # The value is binary data where the first few bytes indicate enabled/disabled
+                        # Common patterns: 02 00 00 00 = enabled, 03 00 00 00 = disabled (most common)
+                        # Alternative: 06 00 00 00 = enabled, 07 00 00 00 = disabled
+                        if isinstance(value, bytes) and len(value) >= 4:
+                            # Check the first 4 bytes to determine enabled status
+                            status_bytes = value[:4]
+                            # Check for disabled patterns
+                            disabled_patterns = [b'\x03\x00\x00\x00', b'\x07\x00\x00\x00', b'\x01\x00\x00\x00']
+                            enabled = status_bytes not in disabled_patterns
+
+                            # Get the command from the Run registry
+                            command = run_items.get(name, "")
+                            if command:
+                                # Parse the command line to extract executable path
+                                exe_path = self._extract_executable_path(command)
+
+                                # Get file information
+                                publisher, description = self._get_file_info(exe_path)
+
+                                # Create startup item
+                                startup_item = StartupItem(
+                                    name=name,
+                                    path=exe_path,
+                                    location=location_name,
+                                    enabled=enabled,
+                                    publisher=publisher,
+                                    description=description
+                                )
+
+                                # Set registry information for Windows StartupApproved format
+                                startup_item.registry_key = subkey
+                                startup_item.registry_value = name
+                                startup_item._actual_registry_value = name
+                                startup_item._run_registry_key = run_key  # Store the Run registry location
+                                startup_item.is_system_critical = self._is_critical_windows_component(name, exe_path)
+                                startup_item._is_startup_approved = True  # Mark as StartupApproved type
+
+                                # Only add if it's manageable
+                                if self._is_manageable_item(startup_item):
+                                    self.startup_items.append(startup_item)
+
+                        i += 1
+
+                    except OSError:
+                        break  # No more values
+
+        except Exception as e:
+            print(f"Error scanning StartupApproved registry key {subkey}: {e}")
+
     def _scan_startup_folders(self):
         """Scan Windows startup folders."""
         if not self.is_windows:
@@ -447,7 +549,141 @@ class StartupScanner:
             return True  # Default to enabled if we can't determine
         except Exception:
             return True
-    
+
+    def _scan_uwp_apps(self):
+        """Scan UWP/Microsoft Store apps that have startup permissions."""
+        if not self.is_windows:
+            return
+
+        try:
+            # Get UWP apps with startup permissions using PowerShell
+            result = subprocess.run([
+                "powershell",
+                "-ExecutionPolicy", "Bypass",
+                "-Command",
+                """
+                Get-StartApps | Where-Object {$_.AppID -like '*!*'} | ForEach-Object {
+                    $app = $_
+                    $packageName = $app.AppID.Split('!')[0]
+                    try {
+                        $package = Get-AppxPackage -Name $packageName -ErrorAction SilentlyContinue
+                        if ($package) {
+                            [PSCustomObject]@{
+                                Name = $app.Name
+                                AppID = $app.AppID
+                                PackageName = $packageName
+                                Publisher = $package.Publisher
+                                InstallLocation = $package.InstallLocation
+                                IsFramework = $package.IsFramework
+                            }
+                        }
+                    } catch {
+                        # Skip if package not found
+                    }
+                } | ConvertTo-Json -Depth 2
+                """
+            ], capture_output=True, text=True, timeout=30, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+
+            if result.returncode == 0 and result.stdout.strip():
+                try:
+                    apps_data = json.loads(result.stdout)
+                    if not isinstance(apps_data, list):
+                        apps_data = [apps_data] if apps_data else []
+
+                    for app in apps_data:
+                        app_name = app.get('Name', 'Unknown')
+                        app_id = app.get('AppID', '')
+                        package_name = app.get('PackageName', '')
+                        publisher = app.get('Publisher', 'Microsoft Corporation')
+                        install_location = app.get('InstallLocation', '')
+                        is_framework = app.get('IsFramework', False)
+
+                        # Skip framework packages
+                        if is_framework:
+                            continue
+
+                        # Check if this app has startup permissions
+                        startup_enabled = self._check_uwp_startup_status(package_name)
+
+                        startup_item = StartupItem(
+                            name=app_name,
+                            path=install_location,
+                            location="Microsoft Store App",
+                            enabled=startup_enabled,
+                            publisher=publisher,
+                            description=f"UWP App: {package_name}"
+                        )
+
+                        # Store UWP-specific information
+                        startup_item.app_id = app_id
+                        startup_item.package_name = package_name
+                        startup_item._is_uwp_app = True
+                        startup_item.is_system_critical = self._is_critical_uwp_app(app_name, package_name)
+
+                        # Only add if it's manageable
+                        if self._is_manageable_uwp_item(startup_item):
+                            self.startup_items.append(startup_item)
+
+                except json.JSONDecodeError:
+                    print("Error parsing UWP apps JSON data")
+
+        except Exception as e:
+            print(f"Error scanning UWP apps: {e}")
+
+    def _check_uwp_startup_status(self, package_name):
+        """Check if a UWP app has startup permissions enabled."""
+        try:
+            # Check the StartupApproved registry for UWP apps
+            startup_key = r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder"
+
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, startup_key) as key:
+                    i = 0
+                    while True:
+                        try:
+                            name, value, reg_type = winreg.EnumValue(key, i)
+                            if package_name.lower() in name.lower():
+                                if isinstance(value, bytes) and len(value) >= 4:
+                                    status_bytes = value[:4]
+                                    return status_bytes != b'\x02\x00\x00\x00'  # Not disabled
+                            i += 1
+                        except OSError:
+                            break
+            except Exception:
+                pass
+
+            # Default to enabled if we can't determine
+            return True
+
+        except Exception:
+            return True
+
+    def _is_critical_uwp_app(self, app_name, package_name):
+        """Check if this is a critical UWP app."""
+        critical_uwp_apps = [
+            'microsoft.windows.cortana', 'microsoft.windows.search', 'microsoft.windowsstore',
+            'microsoft.windows.photos', 'microsoft.windows.calculator', 'microsoft.windowscamera',
+            'microsoft.windows.alarms', 'microsoft.windows.maps', 'microsoft.office',
+            'microsoft.microsoftedge', 'microsoft.windows.contentdeliverymanager'
+        ]
+
+        package_lower = package_name.lower()
+        app_lower = app_name.lower()
+
+        for critical in critical_uwp_apps:
+            if critical in package_lower or critical in app_lower:
+                return True
+
+        return False
+
+    def _is_manageable_uwp_item(self, startup_item):
+        """Check if a UWP startup item can be managed."""
+        try:
+            # UWP apps are generally manageable if they're not system critical
+            return not startup_item.is_system_critical
+        except Exception:
+            return False
+
     def _extract_executable_path(self, command_line):
         """Extract executable path from command line string."""
         if not command_line:
@@ -551,7 +787,7 @@ class StartupScanner:
         """Check if a startup item can be safely managed (enabled/disabled)."""
         try:
             # Test if we can actually manage this item
-            if startup_item.location.startswith("Registry"):
+            if startup_item.location.startswith("Registry") or "Windows Startup" in startup_item.location:
                 # Check if we have registry access
                 if "User" in startup_item.location:
                     hkey = winreg.HKEY_CURRENT_USER
@@ -561,10 +797,9 @@ class StartupScanner:
                 try:
                     with winreg.OpenKey(hkey, startup_item.registry_key, 0, winreg.KEY_READ) as key:
                         # Try to read the value to ensure it exists and is accessible
-                        if startup_item.enabled:
-                            winreg.QueryValueEx(key, startup_item.registry_value)
-                        else:
-                            winreg.QueryValueEx(key, f"{startup_item.registry_value}_DISABLED")
+                        # Use the actual registry value name stored during scanning
+                        actual_value_name = getattr(startup_item, '_actual_registry_value', startup_item.registry_value)
+                        winreg.QueryValueEx(key, actual_value_name)
                         return True
                 except (FileNotFoundError, PermissionError, OSError):
                     return False
@@ -594,6 +829,10 @@ class StartupScanner:
                 except Exception:
                     return False
 
+            elif startup_item.location == "Microsoft Store App":
+                # UWP apps are manageable through Windows settings
+                return self._is_manageable_uwp_item(startup_item)
+
             return True
 
         except Exception:
@@ -607,6 +846,14 @@ class StartupManager:
         self.scanner = StartupScanner()
         self.startup_items = []
         self.backup_data = {}
+
+    def is_admin(self):
+        """Check if the application is running with administrator privileges."""
+        try:
+            import ctypes
+            return ctypes.windll.shell32.IsUserAnAdmin()
+        except Exception:
+            return False
 
     def get_startup_items(self, progress_callback=None):
         """Get all startup items."""
@@ -634,14 +881,26 @@ class StartupManager:
     def disable_startup_item(self, item):
         """Disable a startup item."""
         try:
-            if item.location.startswith("HKCU") or item.location.startswith("HKLM"):
-                return self._disable_registry_item(item)
+            # Check for admin privileges for system-level changes
+            if (item.location.startswith("HKLM") or
+                item.location == "Windows Service" or
+                "System" in item.location) and not self.is_admin():
+                return False, f"Administrator privileges required to disable {item.name}. Please run as administrator."
+
+            if item.location.startswith("HKCU") or item.location.startswith("HKLM") or "Registry" in item.location:
+                # Check if this is a Windows StartupApproved item
+                if getattr(item, '_is_startup_approved', False):
+                    return self._disable_startup_approved_item(item)
+                else:
+                    return self._disable_registry_item(item)
             elif "Startup Folder" in item.location:
                 return self._disable_folder_item(item)
             elif item.location == "Windows Service":
                 return self._disable_service_item(item)
             elif item.location == "Scheduled Task":
                 return self._disable_task_item(item)
+            elif item.location == "Microsoft Store App":
+                return self._disable_uwp_item(item)
             else:
                 return False, f"Unknown startup location: {item.location}"
 
@@ -651,14 +910,26 @@ class StartupManager:
     def enable_startup_item(self, item):
         """Enable a startup item."""
         try:
-            if item.location.startswith("HKCU") or item.location.startswith("HKLM"):
-                return self._enable_registry_item(item)
+            # Check for admin privileges for system-level changes
+            if (item.location.startswith("HKLM") or
+                item.location == "Windows Service" or
+                "System" in item.location) and not self.is_admin():
+                return False, f"Administrator privileges required to enable {item.name}. Please run as administrator."
+
+            if item.location.startswith("HKCU") or item.location.startswith("HKLM") or "Registry" in item.location:
+                # Check if this is a Windows StartupApproved item
+                if getattr(item, '_is_startup_approved', False):
+                    return self._enable_startup_approved_item(item)
+                else:
+                    return self._enable_registry_item(item)
             elif "Startup Folder" in item.location:
                 return self._enable_folder_item(item)
             elif item.location == "Windows Service":
                 return self._enable_service_item(item)
             elif item.location == "Scheduled Task":
                 return self._enable_task_item(item)
+            elif item.location == "Microsoft Store App":
+                return self._enable_uwp_item(item)
             else:
                 return False, f"Unknown startup location: {item.location}"
 
@@ -668,61 +939,202 @@ class StartupManager:
     def _disable_registry_item(self, item):
         """Disable registry startup item by renaming the value."""
         try:
+            # Validate required attributes
+            if not hasattr(item, 'registry_key') or not item.registry_key:
+                return False, f"Registry key not found for {item.name}"
+
+            if not hasattr(item, 'registry_value') or not item.registry_value:
+                return False, f"Registry value not found for {item.name}"
+
             # Determine registry hive
             if "User" in item.location:
                 hkey = winreg.HKEY_CURRENT_USER
             else:
                 hkey = winreg.HKEY_LOCAL_MACHINE
 
-            # Open registry key
-            with winreg.OpenKey(hkey, item.registry_key, 0, winreg.KEY_ALL_ACCESS) as key:
-                # Get current value
-                current_value, reg_type = winreg.QueryValueEx(key, item.registry_value)
+            # Skip already disabled check - allow operation to proceed
 
-                # Rename to disabled (add _DISABLED suffix)
-                disabled_name = f"{item.registry_value}_DISABLED"
-                winreg.SetValueEx(key, disabled_name, 0, reg_type, current_value)
+            # Open registry key with proper error handling
+            try:
+                with winreg.OpenKey(hkey, item.registry_key, 0, winreg.KEY_ALL_ACCESS) as key:
+                    try:
+                        # Get current value using the actual registry value name
+                        actual_value_name = getattr(item, '_actual_registry_value', item.registry_value)
+                        current_value, reg_type = winreg.QueryValueEx(key, actual_value_name)
 
-                # Delete original value
-                winreg.DeleteValue(key, item.registry_value)
+                        # Rename to disabled (add _DISABLED suffix)
+                        disabled_name = f"{item.registry_value}_DISABLED"
 
-            item.enabled = False
-            return True, f"Disabled {item.name}"
+                        # Skip duplicate check - proceed with operation
+
+                        # Create disabled version
+                        winreg.SetValueEx(key, disabled_name, 0, reg_type, current_value)
+
+                        # Delete original value
+                        winreg.DeleteValue(key, actual_value_name)
+
+                        item.enabled = False
+                        # Update the actual registry value name to reflect the new state
+                        item._actual_registry_value = disabled_name
+                        return True, f"Disabled {item.name}"
+
+                    except FileNotFoundError:
+                        return False, f"Registry value '{actual_value_name}' not found for {item.name}"
+                    except PermissionError:
+                        return False, f"Permission denied accessing registry value for {item.name}"
+
+            except FileNotFoundError:
+                return False, f"Registry key '{item.registry_key}' not found"
+            except PermissionError:
+                return False, f"Permission denied accessing registry key for {item.name}. Try running as administrator."
 
         except Exception as e:
-            return False, f"Failed to disable registry item: {str(e)}"
+            return False, f"Failed to disable registry item {item.name}: {str(e)}"
 
     def _enable_registry_item(self, item):
         """Enable registry startup item by restoring the original value name."""
         try:
+            # Validate required attributes
+            if not hasattr(item, 'registry_key') or not item.registry_key:
+                return False, f"Registry key not found for {item.name}"
+
+            if not hasattr(item, 'registry_value') or not item.registry_value:
+                return False, f"Registry value not found for {item.name}"
+
             # Determine registry hive
             if "User" in item.location:
                 hkey = winreg.HKEY_CURRENT_USER
             else:
                 hkey = winreg.HKEY_LOCAL_MACHINE
 
-            # Look for disabled version
-            disabled_name = f"{item.registry_value}_DISABLED"
+            # Skip already enabled check - allow operation to proceed
 
-            with winreg.OpenKey(hkey, item.registry_key, 0, winreg.KEY_ALL_ACCESS) as key:
-                try:
-                    # Get disabled value
-                    current_value, reg_type = winreg.QueryValueEx(key, disabled_name)
+            # Look for disabled version using the actual registry value name
+            actual_value_name = getattr(item, '_actual_registry_value', f"{item.registry_value}_DISABLED")
 
-                    # Restore original name
-                    winreg.SetValueEx(key, item.registry_value, 0, reg_type, current_value)
+            try:
+                with winreg.OpenKey(hkey, item.registry_key, 0, winreg.KEY_ALL_ACCESS) as key:
+                    try:
+                        # Get disabled value
+                        current_value, reg_type = winreg.QueryValueEx(key, actual_value_name)
 
-                    # Delete disabled version
-                    winreg.DeleteValue(key, disabled_name)
+                        # Skip duplicate check - proceed with operation
 
-                    item.enabled = True
-                    return True, f"Enabled {item.name}"
+                        # Restore original name
+                        winreg.SetValueEx(key, item.registry_value, 0, reg_type, current_value)
 
-                except FileNotFoundError:
-                    return False, f"Disabled version of {item.name} not found"
+                        # Delete disabled version
+                        winreg.DeleteValue(key, actual_value_name)
+
+                        item.enabled = True
+                        # Update the actual registry value name to reflect the new state
+                        item._actual_registry_value = item.registry_value
+                        return True, f"Enabled {item.name}"
+
+                    except FileNotFoundError:
+                        return False, f"Disabled version of {item.name} not found in registry"
+                    except PermissionError:
+                        return False, f"Permission denied accessing registry value for {item.name}"
+
+            except FileNotFoundError:
+                return False, f"Registry key '{item.registry_key}' not found"
+            except PermissionError:
+                return False, f"Permission denied accessing registry key for {item.name}. Try running as administrator."
 
         except Exception as e:
-            return False, f"Failed to enable registry item: {str(e)}"
+            return False, f"Failed to enable registry item {item.name}: {str(e)}"
+
+    def _disable_startup_approved_item(self, item):
+        """Disable Windows StartupApproved registry item."""
+        try:
+            # Skip already disabled check - allow operation to proceed
+
+            # Validate required attributes
+            if not hasattr(item, 'registry_key') or not item.registry_key:
+                return False, f"Registry key not found for {item.name}"
+
+            # Determine registry hive
+            if "User" in item.location:
+                hkey = winreg.HKEY_CURRENT_USER
+            else:
+                hkey = winreg.HKEY_LOCAL_MACHINE
+
+            try:
+                with winreg.OpenKey(hkey, item.registry_key, 0, winreg.KEY_ALL_ACCESS) as key:
+                    try:
+                        # Get current value
+                        current_value, reg_type = winreg.QueryValueEx(key, item.registry_value)
+
+                        if isinstance(current_value, bytes) and len(current_value) >= 4:
+                            # Create disabled value (set first 4 bytes to 03 00 00 00)
+                            disabled_value = b'\x03\x00\x00\x00' + current_value[4:]
+
+                            # Set the disabled value
+                            winreg.SetValueEx(key, item.registry_value, 0, reg_type, disabled_value)
+
+                            item.enabled = False
+                            return True, f"Disabled {item.name}"
+                        else:
+                            return False, f"Invalid registry value format for {item.name}"
+
+                    except FileNotFoundError:
+                        return False, f"Registry value '{item.registry_value}' not found for {item.name}"
+                    except PermissionError:
+                        return False, f"Permission denied accessing registry value for {item.name}"
+
+            except FileNotFoundError:
+                return False, f"Registry key '{item.registry_key}' not found"
+            except PermissionError:
+                return False, f"Permission denied accessing registry key for {item.name}. Try running as administrator."
+
+        except Exception as e:
+            return False, f"Failed to disable StartupApproved item {item.name}: {str(e)}"
+
+    def _enable_startup_approved_item(self, item):
+        """Enable Windows StartupApproved registry item."""
+        try:
+            # Skip already enabled check - allow operation to proceed
+
+            # Validate required attributes
+            if not hasattr(item, 'registry_key') or not item.registry_key:
+                return False, f"Registry key not found for {item.name}"
+
+            # Determine registry hive
+            if "User" in item.location:
+                hkey = winreg.HKEY_CURRENT_USER
+            else:
+                hkey = winreg.HKEY_LOCAL_MACHINE
+
+            try:
+                with winreg.OpenKey(hkey, item.registry_key, 0, winreg.KEY_ALL_ACCESS) as key:
+                    try:
+                        # Get current value
+                        current_value, reg_type = winreg.QueryValueEx(key, item.registry_value)
+
+                        if isinstance(current_value, bytes) and len(current_value) >= 4:
+                            # Create enabled value (set first 4 bytes to 02 00 00 00)
+                            enabled_value = b'\x02\x00\x00\x00' + current_value[4:]
+
+                            # Set the enabled value
+                            winreg.SetValueEx(key, item.registry_value, 0, reg_type, enabled_value)
+
+                            item.enabled = True
+                            return True, f"Enabled {item.name}"
+                        else:
+                            return False, f"Invalid registry value format for {item.name}"
+
+                    except FileNotFoundError:
+                        return False, f"Registry value '{item.registry_value}' not found for {item.name}"
+                    except PermissionError:
+                        return False, f"Permission denied accessing registry value for {item.name}"
+
+            except FileNotFoundError:
+                return False, f"Registry key '{item.registry_key}' not found"
+            except PermissionError:
+                return False, f"Permission denied accessing registry key for {item.name}. Try running as administrator."
+
+        except Exception as e:
+            return False, f"Failed to enable StartupApproved item {item.name}: {str(e)}"
 
     def _disable_folder_item(self, item):
         """Disable startup folder item by renaming file."""
@@ -846,6 +1258,30 @@ class StartupManager:
 
         except Exception as e:
             return False, f"Failed to enable task: {str(e)}"
+
+    def _disable_uwp_item(self, item):
+        """Disable UWP/Microsoft Store app startup."""
+        try:
+            # Skip already disabled check - allow operation to proceed
+
+            # UWP apps are managed through Windows Settings
+            # We can provide guidance but cannot directly disable them
+            return False, f"UWP app '{item.name}' must be disabled through Windows Settings > Apps > Startup"
+
+        except Exception as e:
+            return False, f"Failed to disable UWP app: {str(e)}"
+
+    def _enable_uwp_item(self, item):
+        """Enable UWP/Microsoft Store app startup."""
+        try:
+            # Skip already enabled check - allow operation to proceed
+
+            # UWP apps are managed through Windows Settings
+            # We can provide guidance but cannot directly enable them
+            return False, f"UWP app '{item.name}' must be enabled through Windows Settings > Apps > Startup"
+
+        except Exception as e:
+            return False, f"Failed to enable UWP app: {str(e)}"
 
     def bulk_disable_items(self, items):
         """Disable multiple startup items."""

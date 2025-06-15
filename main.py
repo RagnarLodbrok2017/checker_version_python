@@ -71,19 +71,10 @@ def main():
         root = tk.Tk()
         root.withdraw()  # Hide the root window temporarily
         root.destroy()  # Destroy the temporary root
-        
-        # Import the login module
-        from login import LoginWindow
-        
-        # Define a callback function for successful login
-        def on_login_success():
-            # Create and run the application after successful login
-            app = VersionCheckerGUI()
-            app.run()
-        
-        # Show login window first
-        login_window = LoginWindow(on_login_success)
-        login_window.run()
+
+        # Skip login and go directly to the main application
+        app = VersionCheckerGUI()
+        app.run()
         
     except tk.TclError as e:
         print(f"GUI Error: {e}")

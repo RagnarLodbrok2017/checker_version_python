@@ -41,18 +41,12 @@ class VersionCheckerGUI:
         self.results = {}
         self.installing_tools = set()  # Track tools currently being installed
         
-        # Define colors and theme - improved contrast
-        self.colors = {
-            "primary": "#2c3e50",      # Dark blue-gray
-            "secondary": "#3498db",   # Bright blue
-            "accent": "#1abc9c",      # Teal
-            "warning": "#e74c3c",     # Red
-            "success": "#2ecc71",     # Green
-            "background": "#f5f5f5",  # Light gray
-            "text": "#333333",        # Dark gray
-            "light_text": "#ffffff",  # White text (for dark backgrounds)
-            "dark_bg": "#34495e"      # Darker background for contrast
-        }
+        # Modern color scheme with dark/light theme support
+        self.theme_mode = "light"  # Can be "light" or "dark"
+        self.setup_color_themes()
+
+        # Initialize theme
+        self.apply_theme()
         
         # Create menu bar
         self.create_menu()
@@ -65,6 +59,140 @@ class VersionCheckerGUI:
         
         # Center window
         self.center_window()
+
+    def setup_color_themes(self):
+        """Setup modern color themes for light and dark modes."""
+        self.themes = {
+            "light": {
+                "primary": "#6366f1",        # Modern indigo
+                "primary_dark": "#4f46e5",   # Darker indigo
+                "secondary": "#8b5cf6",      # Modern purple
+                "accent": "#06b6d4",         # Modern cyan
+                "success": "#10b981",        # Modern green
+                "warning": "#f59e0b",        # Modern amber
+                "error": "#ef4444",          # Modern red
+                "background": "#ffffff",     # Pure white
+                "surface": "#f8fafc",        # Light gray
+                "surface_variant": "#f1f5f9", # Lighter gray
+                "text_primary": "#1e293b",   # Dark slate
+                "text_secondary": "#64748b", # Medium slate
+                "text_tertiary": "#94a3b8",  # Light slate
+                "border": "#e2e8f0",         # Light border
+                "hover": "#f1f5f9",          # Hover state
+                "active": "#e2e8f0",         # Active state
+                "shadow": "rgba(0, 0, 0, 0.1)" # Subtle shadow
+            },
+            "dark": {
+                "primary": "#818cf8",        # Lighter indigo for dark mode
+                "primary_dark": "#6366f1",   # Standard indigo
+                "secondary": "#a78bfa",      # Lighter purple
+                "accent": "#22d3ee",         # Lighter cyan
+                "success": "#34d399",        # Lighter green
+                "warning": "#fbbf24",        # Lighter amber
+                "error": "#f87171",          # Lighter red
+                "background": "#0f172a",     # Dark slate
+                "surface": "#1e293b",        # Medium dark slate
+                "surface_variant": "#334155", # Lighter dark slate
+                "text_primary": "#f8fafc",   # Light text
+                "text_secondary": "#cbd5e1", # Medium light text
+                "text_tertiary": "#94a3b8",  # Muted text
+                "border": "#475569",         # Dark border
+                "hover": "#334155",          # Dark hover
+                "active": "#475569",         # Dark active
+                "shadow": "rgba(0, 0, 0, 0.3)" # Darker shadow
+            }
+        }
+
+    def apply_theme(self):
+        """Apply the current theme colors."""
+        self.colors = self.themes[self.theme_mode]
+
+    def toggle_theme(self):
+        """Toggle between light and dark themes."""
+        self.theme_mode = "dark" if self.theme_mode == "light" else "light"
+        self.apply_theme()
+        self.setup_styles()
+        self.refresh_ui_colors()
+
+    def refresh_ui_colors(self):
+        """Refresh UI colors after theme change."""
+        # Update root window background
+        self.root.configure(background=self.colors["background"])
+
+        # Update theme button icon
+        if hasattr(self, 'theme_btn'):
+            self.theme_btn.config(text="🌙" if self.theme_mode == "light" else "☀️")
+
+        # Update status bar
+        if hasattr(self, 'status_var'):
+            self.status_var.set(self.status_var.get())  # Trigger refresh
+
+        # Force a complete UI refresh
+        self.root.update_idletasks()
+
+    def create_modern_dialog(self, parent, title, width=600, height=400, min_width=500, min_height=300):
+        """Create a modern styled dialog window with consistent theming."""
+        dialog = tk.Toplevel(parent)
+        dialog.title(title)
+        dialog.geometry(f"{width}x{height}")
+        dialog.minsize(min_width, min_height)
+        dialog.transient(parent)
+        dialog.grab_set()
+
+        # Match main app background color
+        dialog.configure(background=self.colors["background"])
+
+        # Center the dialog
+        self.center_window(dialog)
+
+        return dialog
+
+    def create_modern_header(self, parent, title, icon="", subtitle=""):
+        """Create a clean header with minimal styling."""
+        header_frame = ttk.Frame(parent, padding="10")
+        header_frame.pack(fill=tk.X, pady=(0, 10))
+
+        # Main title with icon
+        title_frame = ttk.Frame(header_frame)
+        title_frame.pack(fill=tk.X)
+
+        if icon:
+            icon_label = ttk.Label(
+                title_frame,
+                text=icon,
+                font=('Segoe UI', 20)
+            )
+            icon_label.pack(side=tk.LEFT, padx=(0, 8))
+
+        title_label = ttk.Label(
+            title_frame,
+            text=title,
+            font=('Segoe UI', 14, 'bold')
+        )
+        title_label.pack(side=tk.LEFT, anchor=tk.W)
+
+        return header_frame
+
+    def create_modern_button_frame(self, parent, buttons_config):
+        """Create a clean button frame.
+
+        Args:
+            parent: Parent widget
+            buttons_config: List of tuples (text, command, style, side)
+        """
+        button_frame = ttk.Frame(parent, padding="10")
+        button_frame.pack(fill=tk.X, pady=(10, 0))
+
+        for text, command, style, side in buttons_config:
+            btn = ttk.Button(
+                button_frame,
+                text=text,
+                command=command,
+                style=style
+            )
+            btn.pack(side=side, padx=5)
+
+        return button_frame
 
     def center_window(self, window=None):
         """Center the window on the screen."""
@@ -87,21 +215,33 @@ class VersionCheckerGUI:
         window_to_center.geometry(f"{width}x{height}+{x}+{y}")
         
     def create_menu(self):
-        """Create the menu bar with options."""
-        menubar = Menu(self.root)
+        """Create the menu bar with options using theme colors."""
+        menubar = Menu(self.root,
+                      background=self.colors["background"],
+                      foreground=self.colors["text_primary"],
+                      activebackground=self.colors["primary"],
+                      activeforeground="white")
         self.root.config(menu=menubar)
-        
+
         # File menu
-        file_menu = Menu(menubar, tearoff=0)
+        file_menu = Menu(menubar, tearoff=0,
+                        background=self.colors["background"],
+                        foreground=self.colors["text_primary"],
+                        activebackground=self.colors["primary"],
+                        activeforeground="white")
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Export JSON", command=self.export_json)
         file_menu.add_command(label="Export Text", command=self.export_text)
         file_menu.add_command(label="Import JSON", command=self.import_json)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.on_close)
-        
+
         # Tools menu
-        tools_menu = Menu(menubar, tearoff=0)
+        tools_menu = Menu(menubar, tearoff=0,
+                         background=self.colors["background"],
+                         foreground=self.colors["text_primary"],
+                         activebackground=self.colors["primary"],
+                         activeforeground="white")
         menubar.add_cascade(label="Tools", menu=tools_menu)
         tools_menu.add_command(label="Check Versions", command=self.start_version_check)
         tools_menu.add_command(label="Auto Install Packages", command=self.auto_install_from_backup)
@@ -116,16 +256,35 @@ class VersionCheckerGUI:
         tools_menu.add_command(label="PC Cleanup", command=self.show_pc_cleanup_options)
 
         # Browser Backup menu
-        browser_menu = Menu(menubar, tearoff=0)
+        browser_menu = Menu(menubar, tearoff=0,
+                           background=self.colors["background"],
+                           foreground=self.colors["text_primary"],
+                           activebackground=self.colors["primary"],
+                           activeforeground="white")
         menubar.add_cascade(label="Browser Backup", menu=browser_menu)
         browser_menu.add_command(label="Backup Browser Data", command=self.show_browser_backup_dialog)
         browser_menu.add_command(label="Restore Browser Data", command=self.show_browser_restore_dialog)
         browser_menu.add_command(label="Manage Backups", command=self.show_browser_backup_manager)
         browser_menu.add_separator()
         browser_menu.add_command(label="Export Bookmarks to HTML", command=self.export_bookmarks_html)
-        
+
+        # View menu
+        view_menu = Menu(menubar, tearoff=0,
+                        background=self.colors["background"],
+                        foreground=self.colors["text_primary"],
+                        activebackground=self.colors["primary"],
+                        activeforeground="white")
+        menubar.add_cascade(label="View", menu=view_menu)
+        view_menu.add_command(label="🌙 Toggle Dark/Light Theme", command=self.toggle_theme)
+        view_menu.add_separator()
+        view_menu.add_command(label="🔄 Refresh UI", command=self.refresh_ui_colors)
+
         # Help menu
-        help_menu = Menu(menubar, tearoff=0)
+        help_menu = Menu(menubar, tearoff=0,
+                        background=self.colors["background"],
+                        foreground=self.colors["text_primary"],
+                        activebackground=self.colors["primary"],
+                        activeforeground="white")
         menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="About", command=self.show_about)
 
@@ -146,7 +305,8 @@ class VersionCheckerGUI:
         loading_dialog.geometry("300x100")
         loading_dialog.transient(self.root)
         loading_dialog.grab_set()
-        
+        loading_dialog.configure(background=self.colors["background"])
+
         # Center the dialog
         self.center_window(loading_dialog)
         
@@ -226,61 +386,54 @@ class VersionCheckerGUI:
         """Show dialog with installed programs."""
         # Close loading dialog
         loading_dialog.destroy()
-        
-        # Create programs dialog
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Installed Programs")
-        dialog.geometry("900x600")
-        dialog.minsize(800, 500)
-        dialog.transient(self.root)
-        dialog.grab_set()
-        
-        # Center the dialog
-        self.center_window(dialog)
-        
-        # Add title and instructions
-        ttk.Label(
-            dialog, 
-            text="Installed Programs",
-            style="Title.TLabel"
-        ).pack(pady=(15, 5), padx=20, anchor=tk.W)
-        
-        ttk.Label(
-            dialog, 
-            text="This list shows all programs installed on your system. You can uninstall programs by clicking the Uninstall button.",
-            style="Info.TLabel",
-            wraplength=850
-        ).pack(pady=(0, 15), padx=20, anchor=tk.W)
-        
-        # Add search frame
-        search_frame = ttk.Frame(dialog)
-        search_frame.pack(fill=tk.X, padx=20, pady=(0, 10))
-        
-        ttk.Label(search_frame, text="Search:", style="Info.TLabel").pack(side=tk.LEFT, padx=(0, 5))
-        
+
+        # Create modern programs dialog
+        dialog = self.create_modern_dialog(
+            self.root,
+            "Installed Programs",
+            width=900,
+            height=600,
+            min_width=800,
+            min_height=500
+        )
+
+        # Create main container
+        main_container = ttk.Frame(dialog)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Create clean header
+        self.create_modern_header(
+            main_container,
+            "Installed Programs",
+            icon="📦"
+        )
+
+        # Search section
+        search_section = ttk.Frame(main_container, padding="10")
+        search_section.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(search_section, text="Search:").pack(side=tk.LEFT, padx=(0, 5))
         search_var = tk.StringVar()
-        search_entry = ttk.Entry(search_frame, textvariable=search_var, width=40)
-        search_entry.pack(side=tk.LEFT, padx=5)
-        
-        # Create a frame for the treeview and scrollbar
-        tree_frame = ttk.Frame(dialog)
-        tree_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
-        
-        # Create treeview
+        search_entry = ttk.Entry(search_section, textvariable=search_var, width=40)
+        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        # Programs list
+        tree_frame = ttk.Frame(main_container)
+        tree_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+
         columns = ("name", "version", "publisher", "action")
         tree = ttk.Treeview(tree_frame, columns=columns, show="headings")
-        
-        # Define column headings
+
+        # Configure columns
         tree.heading("name", text="Program Name")
         tree.heading("version", text="Version")
         tree.heading("publisher", text="Publisher")
         tree.heading("action", text="Action")
-        
-        # Configure column widths
-        tree.column("name", width=300, minwidth=200)
-        tree.column("version", width=100, minwidth=80)
-        tree.column("publisher", width=200, minwidth=150)
-        tree.column("action", width=100, minwidth=80)
+
+        tree.column("name", width=300, minwidth=200, anchor=tk.W)
+        tree.column("version", width=100, minwidth=80, anchor=tk.W)
+        tree.column("publisher", width=200, minwidth=150, anchor=tk.W)
+        tree.column("action", width=100, minwidth=80, anchor=tk.CENTER)
         
         # Add scrollbars
         v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
@@ -330,17 +483,12 @@ class VersionCheckerGUI:
         
         # Bind search entry to search function
         search_var.trace("w", search_programs)
-        
-        # Add close button
-        button_frame = ttk.Frame(dialog)
-        button_frame.pack(fill=tk.X, padx=20, pady=(0, 15))
-        
-        ttk.Button(
-            button_frame,
-            text="Close",
-            command=dialog.destroy,
-            style="Secondary.TButton"
-        ).pack(side=tk.RIGHT, padx=5)
+
+        # Modern button frame
+        button_config = [
+            ("❌ Close", dialog.destroy, "Secondary.TButton", tk.RIGHT)
+        ]
+        self.create_modern_button_frame(main_container, button_config)
         
         # Set focus to search entry
         search_entry.focus()
@@ -575,38 +723,43 @@ class VersionCheckerGUI:
         """Show dialog with leftover registry entries and options to delete them."""
         # First show success message about uninstallation
         messagebox.showinfo("Success", f"{program['name']} was successfully uninstalled.\n\nRegistry leftovers were found.")
+
+        # Create modern dialog
+        dialog = self.create_modern_dialog(
+            self.root,
+            f"Registry Leftovers - {program['name']}",
+            width=800,
+            height=500,
+            min_width=700,
+            min_height=400
+        )
+
+        # Create main container
+        main_container = ttk.Frame(dialog, style="Surface.TFrame")
+        main_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+
+        # Create modern header
+        self.create_modern_header(
+            main_container,
+            f"Registry Leftovers Found",
+            icon="🗂️",
+            subtitle=f"Registry entries related to {program['name']} were found. You can select entries to delete them from the registry."
+        )
         
-        # Create dialog
-        dialog = tk.Toplevel(self.root)
-        dialog.title(f"Registry Leftovers - {program['name']}")
-        dialog.geometry("800x500")
-        dialog.minsize(700, 400)
-        dialog.transient(self.root)
-        dialog.grab_set()
-        self.center_window(dialog)
-        
-        # Create main frame
-        main_frame = ttk.Frame(dialog, padding=15)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Add header
-        ttk.Label(
-            main_frame, 
-            text=f"Registry entries found for {program['name']}", 
-            style="Title.TLabel"
-        ).pack(pady=(0, 10), anchor=tk.W)
-        
-        ttk.Label(
-            main_frame,
-            text="The following registry entries related to the uninstalled program were found. "
-                 "You can select entries to delete them from the registry.",
-            style="Info.TLabel",
-            wraplength=750
-        ).pack(pady=(0, 15), anchor=tk.W)
-        
+        # Create treeview section
+        tree_section = ttk.Frame(main_container, style="Surface.TFrame", padding="15")
+        tree_section.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
+
+        tree_header = ttk.Label(
+            tree_section,
+            text="📋 Registry Entries",
+            style="Subtitle.TLabel"
+        )
+        tree_header.pack(anchor=tk.W, pady=(0, 10))
+
         # Create treeview frame with scrollbar
-        tree_frame = ttk.Frame(main_frame)
-        tree_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
+        tree_frame = ttk.Frame(tree_section, style="Surface.TFrame")
+        tree_frame.pack(fill=tk.BOTH, expand=True)
         
         # Create treeview
         columns = ("select", "name", "path")
@@ -665,40 +818,40 @@ class VersionCheckerGUI:
         
         tree.bind("<Button-1>", toggle_checkbox)
         
-        # Add buttons frame
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=(0, 10))
+        # Add buttons section
+        button_section = ttk.Frame(main_container, style="Surface.TFrame", padding="15")
+        button_section.pack(fill=tk.X, pady=(15, 0))
         
         # Add select/deselect all buttons
-        select_frame = ttk.Frame(button_frame)
+        select_frame = ttk.Frame(button_section, style="Surface.TFrame")
         select_frame.pack(side=tk.LEFT)
-        
+
         def select_all():
             for item_id, var in selected_items.items():
                 var.set(True)
                 tree.set(item_id, "select", "✓")
-        
+
         def deselect_all():
             for item_id, var in selected_items.items():
                 var.set(False)
                 tree.set(item_id, "select", "")
-        
+
         ttk.Button(
             select_frame,
-            text="Select All",
+            text="✅ Select All",
             command=select_all,
             style="Secondary.TButton"
         ).pack(side=tk.LEFT, padx=(0, 5))
-        
+
         ttk.Button(
             select_frame,
-            text="Deselect All",
+            text="❌ Deselect All",
             command=deselect_all,
             style="Secondary.TButton"
         ).pack(side=tk.LEFT)
-        
+
         # Add action buttons
-        action_frame = ttk.Frame(button_frame)
+        action_frame = ttk.Frame(button_section, style="Surface.TFrame")
         action_frame.pack(side=tk.RIGHT)
         
         def delete_selected_entries():
@@ -730,14 +883,14 @@ class VersionCheckerGUI:
         
         ttk.Button(
             action_frame,
-            text="Delete Selected",
+            text="🗑️ Delete Selected",
             command=delete_selected_entries,
             style="Primary.TButton"
         ).pack(side=tk.RIGHT, padx=(5, 0))
-        
+
         ttk.Button(
             action_frame,
-            text="Close",
+            text="❌ Close",
             command=dialog.destroy,
             style="Secondary.TButton"
         ).pack(side=tk.RIGHT)
@@ -812,6 +965,7 @@ class VersionCheckerGUI:
             error_dialog.minsize(600, 300)
             error_dialog.transient(self.root)
             error_dialog.grab_set()
+            error_dialog.configure(background=self.colors["background"])
             self.center_window(error_dialog)
             
             # Create main frame
@@ -840,7 +994,10 @@ class VersionCheckerGUI:
             scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
             
             # Create text widget
-            error_text = tk.Text(error_frame, wrap=tk.WORD, yscrollcommand=scrollbar.set)
+            error_text = tk.Text(error_frame, wrap=tk.WORD, yscrollcommand=scrollbar.set,
+                               background=self.colors["background"],
+                               foreground=self.colors["text_primary"],
+                               insertbackground=self.colors["text_primary"])
             error_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             scrollbar.config(command=error_text.yview)
             
@@ -867,6 +1024,7 @@ class VersionCheckerGUI:
         dialog.minsize(600, 400)
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.configure(background=self.colors["background"])
         self.center_window(dialog)
         
         # Create main frame
@@ -1494,6 +1652,7 @@ class VersionCheckerGUI:
         dialog.minsize(450, 350)
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.configure(background=self.colors["background"])
         self.center_window(dialog)
 
         # Create main frame
@@ -1568,8 +1727,9 @@ class VersionCheckerGUI:
         auto_refresh_var = tk.BooleanVar(value=True)
         auto_refresh_cb = ttk.Checkbutton(
             button_frame,
-            text="Auto-refresh (5s)",
-            variable=auto_refresh_var
+            text="🔄 Auto-refresh (5s)",
+            variable=auto_refresh_var,
+            style="TCheckbutton"
         )
         auto_refresh_cb.pack(side=tk.RIGHT)
 
@@ -2054,6 +2214,7 @@ class VersionCheckerGUI:
         dialog.minsize(550, 450)
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.configure(background=self.colors["background"])
         self.center_window(dialog)
 
         # Create main frame
@@ -2216,6 +2377,7 @@ class VersionCheckerGUI:
         history_dialog.minsize(650, 350)
         history_dialog.transient(parent_dialog)
         history_dialog.grab_set()
+        history_dialog.configure(background=self.colors["background"])
         self.center_window(history_dialog)
 
         # Create main frame
@@ -2537,6 +2699,7 @@ class VersionCheckerGUI:
         dialog.minsize(900, 500)
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.configure(background=self.colors["background"])
         self.center_window(dialog)
 
         # Create main frame
@@ -2583,22 +2746,28 @@ class VersionCheckerGUI:
         )
         self.kill_process_btn.pack(side=tk.LEFT, padx=(0, 10))
 
-        # Export buttons
-        export_json_btn = ttk.Button(
+        # Export dropdown
+        export_var = tk.StringVar(value="📤 Export")
+        export_combo = ttk.Combobox(
             control_frame,
-            text="📄 Export JSON",
-            command=lambda: self.export_network_data(dialog, 'json'),
-            style="Secondary.TButton"
+            textvariable=export_var,
+            values=["📤 Export", "📄 JSON", "📝 Text"],
+            state="readonly",
+            width=12,
+            style="TCombobox"
         )
-        export_json_btn.pack(side=tk.RIGHT, padx=(10, 0))
+        export_combo.pack(side=tk.RIGHT, padx=(10, 0))
 
-        export_txt_btn = ttk.Button(
-            control_frame,
-            text="📝 Export Text",
-            command=lambda: self.export_network_data(dialog, 'text'),
-            style="Secondary.TButton"
-        )
-        export_txt_btn.pack(side=tk.RIGHT)
+        def on_export_select(event):
+            selection = export_var.get()
+            if selection == "📄 JSON":
+                self.export_network_data(dialog, 'json')
+                export_var.set("📤 Export")
+            elif selection == "📝 Text":
+                self.export_network_data(dialog, 'text')
+                export_var.set("📤 Export")
+
+        export_combo.bind("<<ComboboxSelected>>", on_export_select)
 
         # Create treeview for connections
         tree_frame = ttk.Frame(main_frame)
@@ -2719,9 +2888,9 @@ class VersionCheckerGUI:
                         conn['process_path']
                     ), tags=tags)
 
-                # Configure tags for color coding
-                self.network_tree.tag_configure('listening', background='#E8F5E8')
-                self.network_tree.tag_configure('external', background='#FFF3CD')
+                # Configure tags for color coding - use app background
+                self.network_tree.tag_configure('listening', background=self.colors["background"], foreground='#28a745')
+                self.network_tree.tag_configure('external', background=self.colors["background"], foreground='#ffc107')
 
                 self.network_status_label.config(text=f"Found {len(connections)} active network connections")
             else:
@@ -3243,6 +3412,7 @@ class VersionCheckerGUI:
         dialog.minsize(1000, 600)
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.configure(background=self.colors["background"])
         self.center_window(dialog)
 
         # Create main frame
@@ -3362,13 +3532,28 @@ class VersionCheckerGUI:
         )
         hyperv_btn.pack(side=tk.RIGHT, padx=(10, 0))
 
-        export_btn = ttk.Button(
+        # Export dropdown for services
+        service_export_var = tk.StringVar(value="📤 Export")
+        service_export_combo = ttk.Combobox(
             right_buttons,
-            text="📄 Export",
-            command=lambda: self.export_services_dialog(dialog),
-            style="Secondary.TButton"
+            textvariable=service_export_var,
+            values=["📤 Export", "📄 JSON", "📝 Text"],
+            state="readonly",
+            width=12,
+            style="TCombobox"
         )
-        export_btn.pack(side=tk.RIGHT, padx=(10, 0))
+        service_export_combo.pack(side=tk.RIGHT, padx=(10, 0))
+
+        def on_service_export_select(event):
+            selection = service_export_var.get()
+            if selection == "📄 JSON":
+                self.export_services_dialog(dialog, 'json')
+                service_export_var.set("📤 Export")
+            elif selection == "📝 Text":
+                self.export_services_dialog(dialog, 'text')
+                service_export_var.set("📤 Export")
+
+        service_export_combo.bind("<<ComboboxSelected>>", on_service_export_select)
 
         # Create treeview for services
         tree_frame = ttk.Frame(main_frame)
@@ -3567,12 +3752,12 @@ class VersionCheckerGUI:
                     service['description'][:100] + "..." if len(service['description']) > 100 else service['description']
                 ), tags=tags)
 
-            # Configure tags for color coding
-            self.services_tree.tag_configure('critical', background='#FFE6E6', foreground='#CC0000')
-            self.services_tree.tag_configure('essential', background='#FFF3CD', foreground='#856404')
-            self.services_tree.tag_configure('security', background='#E8F5E8', foreground='#155724')
-            self.services_tree.tag_configure('update', background='#CCE5FF', foreground='#004085')
-            self.services_tree.tag_configure('third_party', background='#F8F9FA', foreground='#6C757D')
+            # Configure tags for color coding - use app background
+            self.services_tree.tag_configure('critical', background=self.colors["background"], foreground='#dc3545')
+            self.services_tree.tag_configure('essential', background=self.colors["background"], foreground='#ffc107')
+            self.services_tree.tag_configure('security', background=self.colors["background"], foreground='#28a745')
+            self.services_tree.tag_configure('update', background=self.colors["background"], foreground='#007bff')
+            self.services_tree.tag_configure('third_party', background=self.colors["background"], foreground='#6c757d')
 
             # Update status
             if hasattr(self, 'service_status_label'):
@@ -3685,60 +3870,82 @@ class VersionCheckerGUI:
 
     def show_windows_update_dialog(self, parent_dialog):
         """Show simple Windows Update management dialog."""
-        # Create dialog
-        update_dialog = tk.Toplevel(parent_dialog)
-        update_dialog.title("Windows Update Management")
-        update_dialog.geometry("400x250")
-        update_dialog.transient(parent_dialog)
-        update_dialog.grab_set()
-        self.center_window(update_dialog)
-
-        # Create main frame
-        main_frame = ttk.Frame(update_dialog, padding=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Header
-        header_label = ttk.Label(
-            main_frame,
-            text="🔄 Windows Update Management",
-            font=("Arial", 14, "bold")
+        # Create modern dialog
+        update_dialog = self.create_modern_dialog(
+            parent_dialog,
+            "Windows Update Management",
+            width=500,
+            height=350,
+            min_width=450,
+            min_height=300
         )
-        header_label.pack(pady=(0, 20))
+
+        # Create main container
+        main_container = ttk.Frame(update_dialog, style="Surface.TFrame")
+        main_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+
+        # Create modern header
+        self.create_modern_header(
+            main_container,
+            "Windows Update Management",
+            icon="🔄",
+            subtitle="Manage Windows Update service and settings"
+        )
+
+        # Status section
+        status_section = ttk.Frame(main_container, style="Surface.TFrame", padding="15")
+        status_section.pack(fill=tk.X, pady=(0, 15))
+
+        status_header = ttk.Label(
+            status_section,
+            text="📊 Current Status",
+            style="Subtitle.TLabel"
+        )
+        status_header.pack(anchor=tk.W, pady=(0, 10))
 
         # Status display
         self.update_status_label = ttk.Label(
-            main_frame,
+            status_section,
             text="Checking Windows Update status...",
-            font=("Arial", 10)
+            style="Info.TLabel"
         )
-        self.update_status_label.pack(pady=(0, 20))
+        self.update_status_label.pack(anchor=tk.W, pady=(0, 10))
+
+        # Actions section
+        actions_section = ttk.Frame(main_container, style="Surface.TFrame", padding="15")
+        actions_section.pack(fill=tk.X, pady=(0, 15))
+
+        actions_header = ttk.Label(
+            actions_section,
+            text="⚡ Actions",
+            style="Subtitle.TLabel"
+        )
+        actions_header.pack(anchor=tk.W, pady=(0, 10))
 
         # Single action button (Enable OR Disable based on current status)
         self.windows_update_action_btn = ttk.Button(
-            main_frame,
+            actions_section,
             text="🔄 Checking...",
             state='disabled',
-            width=30,
-            command=lambda: self.toggle_windows_update_simple(update_dialog)
+            command=lambda: self.toggle_windows_update_simple(update_dialog),
+            style="Primary.TButton"
         )
-        self.windows_update_action_btn.pack(pady=10)
+        self.windows_update_action_btn.pack(fill=tk.X, pady=(0, 10))
 
         # Refresh button
         refresh_btn = ttk.Button(
-            main_frame,
+            actions_section,
             text="🔄 Refresh Status",
             command=lambda: self.check_windows_update_simple(update_dialog),
-            width=20
+            style="Secondary.TButton"
         )
-        refresh_btn.pack(pady=5)
+        refresh_btn.pack(fill=tk.X, pady=(0, 10))
 
-        # Close button
-        close_btn = ttk.Button(
-            main_frame,
-            text="Close",
-            command=update_dialog.destroy
-        )
-        close_btn.pack(pady=(20, 0))
+        # Modern button frame for close
+        button_config = [
+            ("❌ Close", update_dialog.destroy, "Secondary.TButton", tk.RIGHT)
+        ]
+        self.create_modern_button_frame(main_container, button_config)
 
         # Check status immediately
         self.check_windows_update_simple(update_dialog)
@@ -3874,31 +4081,40 @@ class VersionCheckerGUI:
 
     def show_hyperv_dialog(self, parent_dialog):
         """Show Hyper-V management dialog."""
-        # Create dialog
-        hyperv_dialog = tk.Toplevel(parent_dialog)
-        hyperv_dialog.title("Hyper-V Management")
-        hyperv_dialog.geometry("500x400")
-        hyperv_dialog.minsize(450, 350)
-        hyperv_dialog.transient(parent_dialog)
-        hyperv_dialog.grab_set()
-        self.center_window(hyperv_dialog)
-
-        # Create main frame
-        main_frame = ttk.Frame(hyperv_dialog, padding=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Header
-        header_label = ttk.Label(
-            main_frame,
-            text="💻 Hyper-V Management",
-            style="Title.TLabel"
+        # Create modern dialog
+        hyperv_dialog = self.create_modern_dialog(
+            parent_dialog,
+            "Hyper-V Management",
+            width=600,
+            height=500,
+            min_width=550,
+            min_height=450
         )
-        header_label.pack(pady=(0, 15))
 
-        # Information message
-        info_text = """Hyper-V is Microsoft's hardware virtualization platform.
+        # Create main container
+        main_container = ttk.Frame(hyperv_dialog, style="Surface.TFrame")
+        main_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
 
-Enabling Hyper-V will:
+        # Create modern header
+        self.create_modern_header(
+            main_container,
+            "Hyper-V Management",
+            icon="💻",
+            subtitle="Microsoft's hardware virtualization platform management"
+        )
+
+        # Information section
+        info_section = ttk.Frame(main_container, style="Surface.TFrame", padding="15")
+        info_section.pack(fill=tk.X, pady=(0, 15))
+
+        info_header = ttk.Label(
+            info_section,
+            text="ℹ️ About Hyper-V",
+            style="Subtitle.TLabel"
+        )
+        info_header.pack(anchor=tk.W, pady=(0, 10))
+
+        info_text = """Enabling Hyper-V will:
 • Allow you to create and run virtual machines
 • Enable Windows Subsystem for Linux 2 (WSL2)
 • Provide hardware-level virtualization support
@@ -3911,61 +4127,83 @@ Disabling Hyper-V will:
 ⚠️ A system restart is required after making changes."""
 
         info_label = ttk.Label(
-            main_frame,
+            info_section,
             text=info_text,
             style="Info.TLabel",
-            wraplength=450,
+            wraplength=500,
             justify=tk.LEFT
         )
-        info_label.pack(pady=(0, 20))
+        info_label.pack(anchor=tk.W, pady=(0, 10))
 
-        # Current status
-        status_frame = ttk.LabelFrame(main_frame, text="Current Status", padding=10)
-        status_frame.pack(fill=tk.X, pady=(0, 20))
+        # Status section
+        status_section = ttk.Frame(main_container, style="Surface.TFrame", padding="15")
+        status_section.pack(fill=tk.X, pady=(0, 15))
 
-        self.hyperv_status_label = ttk.Label(status_frame, text="Checking Hyper-V status...", style="Info.TLabel")
-        self.hyperv_status_label.pack()
+        status_header = ttk.Label(
+            status_section,
+            text="📊 Current Status",
+            style="Subtitle.TLabel"
+        )
+        status_header.pack(anchor=tk.W, pady=(0, 10))
 
-        # Buttons frame
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=(0, 20))
+        self.hyperv_status_label = ttk.Label(
+            status_section,
+            text="Checking Hyper-V status...",
+            style="Info.TLabel"
+        )
+        self.hyperv_status_label.pack(anchor=tk.W, pady=(0, 10))
+
+        # Actions section
+        actions_section = ttk.Frame(main_container, style="Surface.TFrame", padding="15")
+        actions_section.pack(fill=tk.X, pady=(0, 15))
+
+        actions_header = ttk.Label(
+            actions_section,
+            text="⚡ Actions",
+            style="Subtitle.TLabel"
+        )
+        actions_header.pack(anchor=tk.W, pady=(0, 10))
+
+        # Button container for better layout
+        button_container = ttk.Frame(actions_section, style="Surface.TFrame")
+        button_container.pack(fill=tk.X, pady=(0, 10))
 
         # Enable Hyper-V button
         self.enable_hyperv_btn = ttk.Button(
-            button_frame,
+            button_container,
             text="✅ Enable Hyper-V",
-            command=lambda: self.toggle_hyperv_action(hyperv_dialog, True)
+            command=lambda: self.toggle_hyperv_action(hyperv_dialog, True),
+            style="Primary.TButton"
         )
-        self.enable_hyperv_btn.pack(side=tk.LEFT, padx=(0, 10), pady=5)
+        self.enable_hyperv_btn.pack(side=tk.LEFT, padx=(0, 10), fill=tk.X, expand=True)
 
         # Disable Hyper-V button
         self.disable_hyperv_btn = ttk.Button(
-            button_frame,
+            button_container,
             text="❌ Disable Hyper-V",
-            command=lambda: self.toggle_hyperv_action(hyperv_dialog, False)
+            command=lambda: self.toggle_hyperv_action(hyperv_dialog, False),
+            style="Action.TButton"
         )
-        self.disable_hyperv_btn.pack(side=tk.LEFT, padx=(0, 10), pady=5)
+        self.disable_hyperv_btn.pack(side=tk.LEFT, padx=(0, 10), fill=tk.X, expand=True)
 
         # Refresh status button
         refresh_hyperv_btn = ttk.Button(
-            button_frame,
+            actions_section,
             text="🔄 Refresh Status",
-            command=lambda: self.check_hyperv_status(hyperv_dialog)
+            command=lambda: self.check_hyperv_status(hyperv_dialog),
+            style="Secondary.TButton"
         )
-        refresh_hyperv_btn.pack(side=tk.LEFT, pady=5)
+        refresh_hyperv_btn.pack(fill=tk.X, pady=(0, 10))
 
         # Ensure buttons are initially visible and enabled (fallback)
         self.enable_hyperv_btn.config(state='normal', text="✅ Enable Hyper-V")
         self.disable_hyperv_btn.config(state='normal', text="❌ Disable Hyper-V")
 
-        # Close button
-        close_btn = ttk.Button(
-            main_frame,
-            text="Close",
-            command=hyperv_dialog.destroy,
-            style="Secondary.TButton"
-        )
-        close_btn.pack(pady=(10, 0))
+        # Modern button frame for close
+        button_config = [
+            ("❌ Close", hyperv_dialog.destroy, "Secondary.TButton", tk.RIGHT)
+        ]
+        self.create_modern_button_frame(main_container, button_config)
 
         # Check current status after a short delay
         hyperv_dialog.after(100, lambda: self.check_hyperv_status(hyperv_dialog))
@@ -4142,11 +4380,94 @@ Disabling Hyper-V will:
                 self.enable_hyperv_btn.config(state='normal')
                 self.disable_hyperv_btn.config(state='normal')
 
-    def export_services_dialog(self, dialog):
-        """Show export services dialog."""
+    def export_services_dialog(self, dialog, format_type=None):
+        """Show export services dialog or export directly if format specified."""
         if not hasattr(self, 'all_services') or not self.all_services:
             messagebox.showwarning("No Data", "No services data to export. Please refresh the services list first.")
             return
+
+        # If format is specified, export directly
+        if format_type:
+            self.export_services_data(format_type)
+            return
+
+    def export_services_data(self, format_type):
+        """Export services data in specified format."""
+        try:
+            from tkinter import filedialog
+            import json
+            from datetime import datetime
+
+            # Get export options (default values)
+            include_stopped = True
+            include_descriptions = True
+
+            # Prepare data
+            export_data = {
+                'export_info': {
+                    'timestamp': datetime.now().isoformat(),
+                    'total_services': len(self.all_services),
+                    'format': format_type
+                },
+                'services': []
+            }
+
+            for service in self.all_services:
+                if not include_stopped and service.get('status', '').lower() != 'running':
+                    continue
+
+                service_data = {
+                    'name': service.get('name', ''),
+                    'display_name': service.get('display_name', ''),
+                    'status': service.get('status', ''),
+                    'startup_type': service.get('startup_type', ''),
+                    'category': service.get('category', 'Standard')
+                }
+
+                if include_descriptions:
+                    service_data['description'] = service.get('description', '')
+
+                export_data['services'].append(service_data)
+
+            # Choose file location
+            if format_type == 'json':
+                filename = filedialog.asksaveasfilename(
+                    defaultextension=".json",
+                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                    title="Save Services Export"
+                )
+                if filename:
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        json.dump(export_data, f, indent=2, ensure_ascii=False)
+                    messagebox.showinfo("Export Complete", f"Services exported to {filename}")
+
+            elif format_type == 'text':
+                filename = filedialog.asksaveasfilename(
+                    defaultextension=".txt",
+                    filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+                    title="Save Services Export"
+                )
+                if filename:
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        f.write(f"Windows Services Export\n")
+                        f.write(f"Generated: {export_data['export_info']['timestamp']}\n")
+                        f.write(f"Total Services: {export_data['export_info']['total_services']}\n")
+                        f.write("=" * 80 + "\n\n")
+
+                        for service in export_data['services']:
+                            f.write(f"Service: {service['display_name']}\n")
+                            f.write(f"  Name: {service['name']}\n")
+                            f.write(f"  Status: {service['status']}\n")
+                            f.write(f"  Startup: {service['startup_type']}\n")
+                            f.write(f"  Category: {service['category']}\n")
+                            if include_descriptions and service.get('description'):
+                                f.write(f"  Description: {service['description']}\n")
+                            f.write("\n")
+
+                    messagebox.showinfo("Export Complete", f"Services exported to {filename}")
+
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed to export services:\n{str(e)}")
 
         # Ask for export format
         export_dialog = tk.Toplevel(dialog)
@@ -4154,6 +4475,7 @@ Disabling Hyper-V will:
         export_dialog.geometry("400x300")
         export_dialog.transient(dialog)
         export_dialog.grab_set()
+        export_dialog.configure(background=self.colors["background"])
         self.center_window(export_dialog)
 
         # Create main frame
@@ -4170,10 +4492,10 @@ Disabling Hyper-V will:
 
         export_format = tk.StringVar(value="json")
 
-        json_radio = ttk.Radiobutton(format_frame, text="JSON (Structured data)", variable=export_format, value="json")
+        json_radio = ttk.Radiobutton(format_frame, text="📄 JSON (Structured data)", variable=export_format, value="json", style="TRadiobutton")
         json_radio.pack(anchor=tk.W, pady=2)
 
-        text_radio = ttk.Radiobutton(format_frame, text="Text (Human readable)", variable=export_format, value="text")
+        text_radio = ttk.Radiobutton(format_frame, text="📝 Text (Human readable)", variable=export_format, value="text", style="TRadiobutton")
         text_radio.pack(anchor=tk.W, pady=2)
 
         # Options
@@ -4181,11 +4503,11 @@ Disabling Hyper-V will:
         options_frame.pack(fill=tk.X, pady=(0, 15))
 
         include_stopped = tk.BooleanVar(value=True)
-        include_stopped_cb = ttk.Checkbutton(options_frame, text="Include stopped services", variable=include_stopped)
+        include_stopped_cb = ttk.Checkbutton(options_frame, text="📋 Include stopped services", variable=include_stopped, style="TCheckbutton")
         include_stopped_cb.pack(anchor=tk.W, pady=2)
 
         include_descriptions = tk.BooleanVar(value=True)
-        include_descriptions_cb = ttk.Checkbutton(options_frame, text="Include service descriptions", variable=include_descriptions)
+        include_descriptions_cb = ttk.Checkbutton(options_frame, text="📝 Include service descriptions", variable=include_descriptions, style="TCheckbutton")
         include_descriptions_cb.pack(anchor=tk.W, pady=2)
 
         # Buttons
@@ -4358,6 +4680,7 @@ Disabling Hyper-V will:
         dialog.minsize(600, 400)
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.configure(background=self.colors["background"])
         self.center_window(dialog)
         
         # Create main frame
@@ -4391,7 +4714,10 @@ Disabling Hyper-V will:
         
         if success_count > 0:
             # Create text widget for success results
-            success_text = tk.Text(success_frame, wrap=tk.WORD, height=15)
+            success_text = tk.Text(success_frame, wrap=tk.WORD, height=15,
+                                 background=self.colors["background"],
+                                 foreground=self.colors["text_primary"],
+                                 insertbackground=self.colors["text_primary"])
             success_text.pack(fill=tk.BOTH, expand=True)
             
             # Add scrollbar
@@ -4417,7 +4743,10 @@ Disabling Hyper-V will:
         
         if failed_count > 0:
             # Create text widget for failed results
-            failed_text = tk.Text(failed_frame, wrap=tk.WORD, height=15)
+            failed_text = tk.Text(failed_frame, wrap=tk.WORD, height=15,
+                                background=self.colors["background"],
+                                foreground=self.colors["text_primary"],
+                                insertbackground=self.colors["text_primary"])
             failed_text.pack(fill=tk.BOTH, expand=True)
             
             # Add scrollbar
@@ -4451,134 +4780,335 @@ Disabling Hyper-V will:
         self.status_var.set(f"Cleanup completed: {success_count} successful, {failed_count} failed")
     
     def setup_styles(self):
-        """Configure ttk styles for a modern look."""
+        """Configure modern ttk styles with enhanced visual design."""
         style = ttk.Style()
-        
-        # Configure frame style
-        style.configure("Card.TFrame", background=self.colors["background"])
-        
-        # Configure treeview style with improved contrast
-        style.configure("Treeview", 
-                      rowheight=30,
+
+        # Set the theme base
+        try:
+            style.theme_use('clam')  # Use clam as base for better customization
+        except:
+            pass
+
+        # Modern frame styles - explicit theme backgrounds
+        style.configure("Card.TFrame",
+                      background=self.colors["background"],
+                      relief="flat",
+                      borderwidth=0)
+
+        style.configure("Surface.TFrame",
+                      background=self.colors["background"],
+                      relief="flat",
+                      borderwidth=0)
+
+        # Default TFrame style with theme background
+        style.configure("TFrame",
+                      background=self.colors["background"],
+                      relief="flat",
+                      borderwidth=0)
+
+        # Default TLabel style with theme background
+        style.configure("TLabel",
+                      background=self.colors["background"],
+                      foreground=self.colors["text_primary"])
+
+        # Default TButton style with theme background
+        style.configure("TButton",
+                      background=self.colors["background"],
+                      foreground=self.colors["text_primary"])
+
+        # Default TEntry style with modern appearance
+        style.configure("TEntry",
+                      fieldbackground=self.colors["background"],
+                      foreground=self.colors["text_primary"],
+                      borderwidth=2,
+                      relief="solid",
+                      bordercolor=self.colors["border"],
+                      insertcolor=self.colors["primary"],
+                      font=('Segoe UI', 10),
+                      padding=(8, 6))
+
+        # Default TCombobox style with modern appearance
+        style.configure("TCombobox",
+                      fieldbackground=self.colors["background"],
+                      foreground=self.colors["text_primary"],
+                      background=self.colors["background"],
+                      borderwidth=2,
+                      relief="solid",
+                      bordercolor=self.colors["border"],
+                      font=('Segoe UI', 10),
+                      padding=(8, 6),
+                      arrowcolor=self.colors["text_primary"])
+
+        # Modern treeview styling - clean backgrounds
+        style.configure("Treeview",
+                      rowheight=35,
                       background=self.colors["background"],
                       fieldbackground=self.colors["background"],
-                      font=('Segoe UI', 10))
-        style.configure("Treeview.Heading", 
-                      font=('Segoe UI', 11, 'bold'),
-                      background=self.colors["primary"],
-                      foreground=self.colors["light_text"])
-        
-        # Map hover and selection colors for treeview
-        style.map('Treeview', 
-                background=[('selected', self.colors["secondary"])],
-                foreground=[('selected', self.colors["light_text"])])
-        
-        # Configure button styles with improved contrast
-        style.configure("Action.TButton", 
-                      font=('Segoe UI', 11, 'bold'),
-                      background=self.colors["secondary"],
-                      foreground=self.colors["text"])
-        style.map("Action.TButton",
-                background=[('active', self.colors["accent"])],
-                foreground=[('active', self.colors["text"])])
-        
-        # Primary button style
-        style.configure("Primary.TButton", 
-                      font=('Segoe UI', 11, 'bold'),
-                      background=self.colors["primary"],
-                      foreground=self.colors["text"])
-        style.map("Primary.TButton",
-                background=[('active', self.colors["secondary"])],
-                foreground=[('active', self.colors["text"])])
-        
-        # Secondary button style
-        style.configure("Secondary.TButton", 
-                      font=('Segoe UI', 10, 'bold'),
-                      background=self.colors["dark_bg"],
-                      foreground=self.colors["text"])
-        style.map("Secondary.TButton",
-                background=[('active', self.colors["secondary"])],
-                foreground=[('active', self.colors["light_text"])])
-        
-        # Label styles
-        style.configure("Title.TLabel", 
-                      font=('Segoe UI', 18, 'bold'),
-                      foreground=self.colors["primary"])
-        style.configure("Subtitle.TLabel", 
-                      font=('Segoe UI', 12, 'bold'),
-                      foreground=self.colors["secondary"])
-        style.configure("Info.TLabel", 
+                      foreground=self.colors["text_primary"],
                       font=('Segoe UI', 10),
-                      foreground=self.colors["text"])
-        
-        # Separator style
-        style.configure("TSeparator", background=self.colors["secondary"])
+                      borderwidth=0,
+                      relief="flat")
+
+        style.configure("Treeview.Heading",
+                      font=('Segoe UI', 11, 'bold'),
+                      background=self.colors["primary"],
+                      foreground="white",
+                      relief="flat",
+                      borderwidth=0)
+
+        # Enhanced treeview interactions
+        style.map('Treeview',
+                background=[('selected', self.colors["primary"]),
+                          ('focus', self.colors["hover"])],
+                foreground=[('selected', self.colors["background"] if self.theme_mode == "light" else self.colors["text_primary"])])
+
+        style.map('Treeview.Heading',
+                background=[('active', self.colors["primary_dark"])])
+
+        # Modern button styles with enhanced visual feedback
+        style.configure("Primary.TButton",
+                      font=('Segoe UI', 11, 'bold'),
+                      background=self.colors["primary"],
+                      foreground=self.colors["background"] if self.theme_mode == "light" else self.colors["text_primary"],
+                      borderwidth=0,
+                      focuscolor='none',
+                      relief="flat",
+                      padding=(20, 10))
+
+        style.map("Primary.TButton",
+                background=[('active', self.colors["primary_dark"]),
+                          ('pressed', self.colors["primary_dark"])],
+                relief=[('pressed', 'flat')])
+
+        style.configure("Secondary.TButton",
+                      font=('Segoe UI', 10, 'bold'),
+                      background=self.colors["background"],
+                      foreground=self.colors["text_primary"],
+                      borderwidth=1,
+                      focuscolor='none',
+                      relief="flat",
+                      padding=(15, 8))
+
+        style.map("Secondary.TButton",
+                background=[('active', self.colors["hover"]),
+                          ('pressed', self.colors["active"])],
+                bordercolor=[('focus', self.colors["primary"])])
+
+        style.configure("Action.TButton",
+                      font=('Segoe UI', 10, 'bold'),
+                      background=self.colors["accent"],
+                      foreground=self.colors["background"] if self.theme_mode == "light" else self.colors["text_primary"],
+                      borderwidth=0,
+                      focuscolor='none',
+                      relief="flat",
+                      padding=(15, 8))
+
+        style.map("Action.TButton",
+                background=[('active', self.colors["secondary"]),
+                          ('pressed', self.colors["secondary"])])
+
+        # Modern label styles with explicit theme backgrounds
+        style.configure("Title.TLabel",
+                      font=('Segoe UI', 20, 'bold'),
+                      foreground=self.colors["text_primary"],
+                      background=self.colors["background"])
+
+        style.configure("Subtitle.TLabel",
+                      font=('Segoe UI', 14, 'bold'),
+                      foreground=self.colors["text_primary"],
+                      background=self.colors["background"])
+
+        style.configure("Info.TLabel",
+                      font=('Segoe UI', 10),
+                      foreground=self.colors["text_secondary"],
+                      background=self.colors["background"])
+
+        style.configure("Caption.TLabel",
+                      font=('Segoe UI', 9),
+                      foreground=self.colors["text_tertiary"],
+                      background=self.colors["background"])
+
+        # Modern entry styles with enhanced appearance
+        style.configure("TEntry",
+                      fieldbackground=self.colors["background"],
+                      foreground=self.colors["text_primary"],
+                      borderwidth=2,
+                      relief="solid",
+                      insertcolor=self.colors["primary"],
+                      font=('Segoe UI', 10),
+                      padding=(8, 6))
+
+        style.map("TEntry",
+                bordercolor=[('focus', self.colors["primary"]),
+                           ('!focus', self.colors["border"])],
+                fieldbackground=[('readonly', self.colors["surface"]),
+                               ('disabled', self.colors["surface"])])
+
+        # Modern combobox styles with enhanced appearance
+        style.configure("TCombobox",
+                      fieldbackground=self.colors["background"],
+                      foreground=self.colors["text_primary"],
+                      background=self.colors["background"],
+                      borderwidth=2,
+                      relief="solid",
+                      font=('Segoe UI', 10),
+                      padding=(8, 6),
+                      arrowcolor=self.colors["text_primary"])
+
+        style.map("TCombobox",
+                bordercolor=[('focus', self.colors["primary"]),
+                           ('!focus', self.colors["border"])],
+                fieldbackground=[('readonly', self.colors["background"]),
+                               ('disabled', self.colors["surface"])],
+                background=[('active', self.colors["hover"]),
+                          ('pressed', self.colors["active"])])
+
+        # Combobox dropdown styling
+        style.configure("TCombobox.Listbox",
+                      background=self.colors["background"],
+                      foreground=self.colors["text_primary"],
+                      selectbackground=self.colors["primary"],
+                      selectforeground="white",
+                      borderwidth=1,
+                      relief="solid")
+
+        # Modern progressbar - clean background
+        style.configure("TProgressbar",
+                      background=self.colors["primary"],
+                      troughcolor=self.colors["background"],
+                      borderwidth=0,
+                      lightcolor=self.colors["primary"],
+                      darkcolor=self.colors["primary"])
+
+        # Modern separator with theme background
+        style.configure("TSeparator",
+                      background=self.colors["background"])
+
+        # Modern checkbutton with enhanced styling
+        style.configure("TCheckbutton",
+                      foreground=self.colors["text_primary"],
+                      background=self.colors["background"],
+                      focuscolor='none',
+                      font=('Segoe UI', 10),
+                      borderwidth=0,
+                      relief="flat")
+
+        style.map("TCheckbutton",
+                 background=[('active', self.colors["hover"]),
+                           ('pressed', self.colors["active"])],
+                 foreground=[('active', self.colors["text_primary"]),
+                           ('disabled', self.colors["text_tertiary"])])
+
+        # Modern labelframe with enhanced styling
+        style.configure("TLabelframe",
+                      foreground=self.colors["text_primary"],
+                      background=self.colors["background"],
+                      borderwidth=1,
+                      relief="solid",
+                      bordercolor=self.colors["border"])
+
+        style.configure("TLabelframe.Label",
+                      foreground=self.colors["text_primary"],
+                      background=self.colors["background"],
+                      font=('Segoe UI', 10, 'bold'))
+
+        # Modern radiobutton with enhanced styling
+        style.configure("TRadiobutton",
+                      foreground=self.colors["text_primary"],
+                      background=self.colors["background"],
+                      focuscolor='none',
+                      font=('Segoe UI', 10),
+                      borderwidth=0,
+                      relief="flat")
+
+        style.map("TRadiobutton",
+                 background=[('active', self.colors["hover"]),
+                           ('pressed', self.colors["active"])],
+                 foreground=[('active', self.colors["text_primary"]),
+                           ('disabled', self.colors["text_tertiary"])])
     
     def create_widgets(self):
         """Create and arrange GUI widgets with modern styling."""
         # Set background color for root window
         self.root.configure(background=self.colors["background"])
-        
-        # Main frame with padding
-        main_frame = ttk.Frame(self.root, padding="15", style="Card.TFrame")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=10, pady=10)
-        
-        # Configure grid weights
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(1, weight=1)
-        
-        # Header with logo and title
-        header_frame = ttk.Frame(main_frame, style="Card.TFrame")
+
+        # Main container with modern styling
+        main_container = ttk.Frame(self.root, style="Card.TFrame")
+        main_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+
+        # Configure grid weights for responsive design
+        main_container.columnconfigure(1, weight=1)
+        main_container.rowconfigure(1, weight=1)
+
+        # Modern header with enhanced styling
+        header_frame = ttk.Frame(main_container, style="Surface.TFrame", padding="20")
         header_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 20))
+        header_frame.columnconfigure(1, weight=1)
         
-        # App icon/logo (using emoji as placeholder)
+        # Modern app icon with enhanced styling
         logo_label = ttk.Label(
-            header_frame, 
-            text="🔍", 
-            font=('Segoe UI', 24),
-            style="Title.TLabel"
+            header_frame,
+            text="🔧",
+            font=('Segoe UI', 32),
+            foreground=self.colors["primary"]
         )
-        logo_label.grid(row=0, column=0, padx=(0, 10))
-        
-        # Title
+        logo_label.grid(row=0, column=0, rowspan=2, padx=(0, 15), pady=5)
+
+        # Enhanced title with modern typography
         title_label = ttk.Label(
-            header_frame, 
-            text="Programming Tools Version Checker", 
+            header_frame,
+            text="Programming Tools Version Checker",
             style="Title.TLabel"
         )
         title_label.grid(row=0, column=1, sticky=tk.W)
-        
-        # Subtitle
+
+        # Enhanced subtitle
         subtitle_label = ttk.Label(
             header_frame,
-            text="Detect, manage, and install development tools",
+            text="Detect, manage, and install development tools with modern interface",
             style="Info.TLabel"
         )
         subtitle_label.grid(row=1, column=1, sticky=tk.W)
+
+        # Theme toggle button in header
+        self.theme_btn = ttk.Button(
+            header_frame,
+            text="🌙" if self.theme_mode == "light" else "☀️",
+            command=self.toggle_theme,
+            style="Secondary.TButton",
+            width=4
+        )
+        self.theme_btn.grid(row=0, column=2, padx=(15, 0))
         
         # Control panel (left sidebar)
-        control_panel = ttk.Frame(main_frame, style="Card.TFrame", padding="10")
+        control_panel = ttk.Frame(main_container, style="Surface.TFrame", padding="15")
         control_panel.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 15))
-        
+
+        # Control panel header
+        control_header = ttk.Label(
+            control_panel,
+            text="🎛️ Control Panel",
+            style="Subtitle.TLabel"
+        )
+        control_header.grid(row=0, column=0, sticky=tk.W, pady=(0, 15))
+
         # Main action button
         self.refresh_btn = ttk.Button(
-            control_panel, 
-            text="🔄 Check Versions", 
+            control_panel,
+            text="🔄 Check Versions",
             command=self.start_version_check,
             style="Primary.TButton"
         )
-        self.refresh_btn.grid(row=0, column=0, pady=(0, 15), sticky=tk.W+tk.E, ipady=5)
-        
-        ttk.Separator(control_panel, orient='horizontal').grid(row=1, column=0, sticky=tk.W+tk.E, pady=15)
+        self.refresh_btn.grid(row=1, column=0, pady=(0, 15), sticky=tk.W+tk.E, ipady=5)
+
+        ttk.Separator(control_panel, orient='horizontal').grid(row=2, column=0, sticky=tk.W+tk.E, pady=15)
         
         # Export section
         export_label = ttk.Label(control_panel, text="Export Results", style="Subtitle.TLabel")
-        export_label.grid(row=2, column=0, sticky=tk.W, pady=(0, 10))
-        
+        export_label.grid(row=3, column=0, sticky=tk.W, pady=(0, 10))
+
         export_frame = ttk.Frame(control_panel, style="Card.TFrame")
-        export_frame.grid(row=3, column=0, sticky=tk.W+tk.E, pady=(0, 5))
+        export_frame.grid(row=4, column=0, sticky=tk.W+tk.E, pady=(0, 5))
         export_frame.columnconfigure(0, weight=1)
         export_frame.columnconfigure(1, weight=1)
         
@@ -4607,8 +5137,8 @@ Disabling Hyper-V will:
             command=self.import_json,
             style="Secondary.TButton"
         )
-        self.import_json_btn.grid(row=4, column=0, pady=(5, 0), sticky=tk.W+tk.E, ipady=3)
-        
+        self.import_json_btn.grid(row=5, column=0, pady=(5, 0), sticky=tk.W+tk.E, ipady=3)
+
         # Add auto install packages button
         self.auto_install_btn = ttk.Button(
             control_panel,
@@ -4616,13 +5146,13 @@ Disabling Hyper-V will:
             command=self.auto_install_from_backup,
             style="Primary.TButton"
         )
-        self.auto_install_btn.grid(row=5, column=0, pady=(5, 0), sticky=tk.W+tk.E, ipady=3)
+        self.auto_install_btn.grid(row=6, column=0, pady=(5, 0), sticky=tk.W+tk.E, ipady=3)
 
-        ttk.Separator(control_panel, orient='horizontal').grid(row=6, column=0, sticky=tk.W+tk.E, pady=15)
+        ttk.Separator(control_panel, orient='horizontal').grid(row=7, column=0, sticky=tk.W+tk.E, pady=15)
 
         # RAM Monitor section
         ram_label = ttk.Label(control_panel, text="System Monitor", style="Subtitle.TLabel")
-        ram_label.grid(row=7, column=0, sticky=tk.W, pady=(0, 10))
+        ram_label.grid(row=8, column=0, sticky=tk.W, pady=(0, 10))
 
         self.ram_monitor_btn = ttk.Button(
             control_panel,
@@ -4630,7 +5160,7 @@ Disabling Hyper-V will:
             command=self.show_ram_monitor,
             style="Action.TButton"
         )
-        self.ram_monitor_btn.grid(row=8, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
+        self.ram_monitor_btn.grid(row=9, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
 
         self.speed_test_btn = ttk.Button(
             control_panel,
@@ -4638,7 +5168,7 @@ Disabling Hyper-V will:
             command=self.show_speed_test,
             style="Action.TButton"
         )
-        self.speed_test_btn.grid(row=9, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
+        self.speed_test_btn.grid(row=10, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
 
         self.network_monitor_btn = ttk.Button(
             control_panel,
@@ -4646,7 +5176,7 @@ Disabling Hyper-V will:
             command=self.show_network_monitor,
             style="Action.TButton"
         )
-        self.network_monitor_btn.grid(row=10, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
+        self.network_monitor_btn.grid(row=11, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
 
         self.service_manager_btn = ttk.Button(
             control_panel,
@@ -4654,7 +5184,7 @@ Disabling Hyper-V will:
             command=self.show_service_manager,
             style="Action.TButton"
         )
-        self.service_manager_btn.grid(row=11, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
+        self.service_manager_btn.grid(row=12, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
 
         self.hardware_info_btn = ttk.Button(
             control_panel,
@@ -4662,7 +5192,7 @@ Disabling Hyper-V will:
             command=self.show_hardware_info,
             style="Action.TButton"
         )
-        self.hardware_info_btn.grid(row=12, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
+        self.hardware_info_btn.grid(row=13, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
 
         self.startup_manager_btn = ttk.Button(
             control_panel,
@@ -4671,13 +5201,13 @@ Disabling Hyper-V will:
             style="Action.TButton",
             takefocus=False
         )
-        self.startup_manager_btn.grid(row=13, column=0, pady=(0, 10), sticky=tk.W+tk.E, ipady=3)
+        self.startup_manager_btn.grid(row=14, column=0, pady=(0, 10), sticky=tk.W+tk.E, ipady=3)
 
-        ttk.Separator(control_panel, orient='horizontal').grid(row=13, column=0, sticky=tk.W+tk.E, pady=15)
+        ttk.Separator(control_panel, orient='horizontal').grid(row=15, column=0, sticky=tk.W+tk.E, pady=15)
 
         # Installation section
         install_label = ttk.Label(control_panel, text="Installation", style="Subtitle.TLabel")
-        install_label.grid(row=14, column=0, sticky=tk.W, pady=(0, 10))
+        install_label.grid(row=16, column=0, sticky=tk.W, pady=(0, 10))
 
         self.install_selected_btn = ttk.Button(
             control_panel,
@@ -4686,11 +5216,11 @@ Disabling Hyper-V will:
             state='disabled',
             style="Action.TButton"
         )
-        self.install_selected_btn.grid(row=15, column=0, pady=(0, 10), sticky=tk.W+tk.E, ipady=3)
+        self.install_selected_btn.grid(row=17, column=0, pady=(0, 10), sticky=tk.W+tk.E, ipady=3)
 
         # Instructions card
         info_frame = ttk.Frame(control_panel, padding="10", style="Card.TFrame")
-        info_frame.grid(row=16, column=0, sticky=tk.W+tk.E, pady=(5, 0))
+        info_frame.grid(row=18, column=0, sticky=tk.W+tk.E, pady=(5, 0))
         info_frame.configure(borderwidth=1, relief="solid")
         
         # Instructions label with icon
@@ -4707,7 +5237,7 @@ Disabling Hyper-V will:
         control_panel.columnconfigure(0, weight=1)
         
         # Results frame (main content area)
-        results_container = ttk.Frame(main_frame, style="Card.TFrame", padding="5")
+        results_container = ttk.Frame(main_container, style="Card.TFrame", padding="15")
         results_container.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
         results_container.columnconfigure(0, weight=1)
         results_container.rowconfigure(1, weight=1)
@@ -4752,7 +5282,7 @@ Disabling Hyper-V will:
         h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
         
         # Footer with status and progress
-        footer_frame = ttk.Frame(main_frame, style="Card.TFrame", padding="5")
+        footer_frame = ttk.Frame(main_container, style="Surface.TFrame", padding="15")
         footer_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(15, 0))
         footer_frame.columnconfigure(0, weight=1)
         
@@ -4778,8 +5308,7 @@ Disabling Hyper-V will:
         copyright_label = ttk.Label(
             copyright_frame,
             text="© 2025 Developed by Elnakieb. All rights reserved.",
-            style="Info.TLabel",
-            foreground="#666666",
+            foreground=self.colors["text_tertiary"],
             font=('Segoe UI', 8)
         )
         copyright_label.pack(anchor=tk.CENTER)
@@ -4803,8 +5332,7 @@ Disabling Hyper-V will:
     def start_version_check(self):
         """Start version checking in a separate thread."""
         self.refresh_btn.config(state='disabled')
-        self.export_json_btn.config(state='disabled')
-        self.export_txt_btn.config(state='disabled')
+        # Note: Export functionality is now handled by dropdown in other dialogs
         self.progress.start()
         self.status_var.set("Checking versions... This may take a moment.")
 
@@ -4887,9 +5415,7 @@ Disabling Hyper-V will:
 
             self.status_var.set(f"✅ Scan complete - {installed_count}/{total_tools} tools found, {installable_count} can be auto-installed")
 
-            # Enable export buttons
-            self.export_json_btn.config(state='normal')
-            self.export_txt_btn.config(state='normal')
+            # Note: Export functionality is now handled by dropdown in other dialogs
 
         except Exception as e:
             self.show_error(f"Error updating results: {str(e)}")
@@ -4985,7 +5511,8 @@ Disabling Hyper-V will:
         dialog.transient(self.root)
         dialog.grab_set()
         dialog.focus_set()
-        
+        dialog.configure(background=self.colors["background"])
+
         # Center the dialog
         self.center_window(dialog)
         
@@ -5166,7 +5693,8 @@ Disabling Hyper-V will:
         dialog.transient(self.root)
         dialog.grab_set()
         dialog.focus_set()
-        
+        dialog.configure(background=self.colors["background"])
+
         # Center the dialog
         self.center_window(dialog)
         
@@ -5497,6 +6025,7 @@ Disabling Hyper-V will:
         dialog.minsize(600, 600)    # Set minimum size
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.configure(background=self.colors["background"])
         self.center_window(dialog)
 
         # Title
@@ -5522,9 +6051,10 @@ Disabling Hyper-V will:
             status = "✅ Detected" if is_detected else "❌ Not Found"
             cb = ttk.Checkbutton(
                 browser_frame,
-                text=f"{browser_name} ({status})",
+                text=f"🌐 {browser_name} ({status})",
                 variable=var,
-                state='normal' if is_detected else 'disabled'
+                state='normal' if is_detected else 'disabled',
+                style="TCheckbutton"
             )
             cb.pack(anchor=tk.W, pady=2)
 
@@ -5683,6 +6213,7 @@ Disabling Hyper-V will:
         dialog.minsize(750, 650)
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.configure(background=self.colors["background"])
         self.center_window(dialog)
 
         # Title
@@ -5697,15 +6228,20 @@ Disabling Hyper-V will:
         backup_frame = ttk.LabelFrame(dialog, text="📦 Select Backup to Restore", padding=15)
         backup_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
 
-        # Create simple backup listbox
+        # Create simple backup listbox with theme colors
         self.backup_listbox = tk.Listbox(
             backup_frame,
             font=('Arial', 12),
             height=10,
             selectmode=tk.SINGLE,
             activestyle='dotbox',
-            selectbackground='#0078d4',
-            selectforeground='white'
+            selectbackground=self.colors["primary"],
+            selectforeground='white',
+            background=self.colors["background"],
+            foreground=self.colors["text_primary"],
+            highlightthickness=0,
+            borderwidth=1,
+            relief="solid"
         )
         self.backup_listbox.pack(fill=tk.BOTH, expand=True, pady=10)
 
@@ -5945,6 +6481,7 @@ Disabling Hyper-V will:
         dialog.geometry("800x600")
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.configure(background=self.colors["background"])
         self.center_window(dialog)
 
         # Title
@@ -6087,6 +6624,7 @@ Disabling Hyper-V will:
         dialog.minsize(550, 500)
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.configure(background=self.colors["background"])
         self.center_window(dialog)
 
         # Title with better styling
@@ -6105,9 +6643,10 @@ Disabling Hyper-V will:
         for browser in available_browsers:
             ttk.Radiobutton(
                 browser_frame,
-                text=browser,
+                text=f"🌐 {browser}",
                 variable=browser_var,
-                value=browser
+                value=browser,
+                style="TRadiobutton"
             ).pack(anchor=tk.W, pady=2)
 
         # Profile selection
@@ -6183,93 +6722,99 @@ Disabling Hyper-V will:
 
     def show_hardware_info(self):
         """Show Hardware Information Viewer dialog."""
-        # Create dialog
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Hardware Information Viewer")
-        dialog.geometry("800x600")
-        dialog.minsize(700, 500)
-        dialog.transient(self.root)
-        dialog.grab_set()
-        self.center_window(dialog)
-
-        # Create main frame with scrollable content
-        main_frame = ttk.Frame(dialog, padding=10)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Header
-        header_frame = ttk.Frame(main_frame)
-        header_frame.pack(fill=tk.X, pady=(0, 10))
-
-        header_label = ttk.Label(
-            header_frame,
-            text="💻 Hardware Information Viewer",
-            font=("Arial", 16, "bold")
+        # Create modern dialog
+        dialog = self.create_modern_dialog(
+            self.root,
+            "Hardware Information",
+            width=1000,
+            height=650,
+            min_width=900,
+            min_height=550
         )
-        header_label.pack(side=tk.LEFT)
 
-        # Progress bar (initially hidden)
-        self.hw_progress = ttk.Progressbar(
-            header_frame,
-            mode='determinate',
-            length=200
+        # Create main container
+        main_container = ttk.Frame(dialog)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Create clean header
+        self.create_modern_header(
+            main_container,
+            "Hardware Information",
+            icon="💻"
         )
+
+        # Top control bar - all buttons in one line
+        control_bar = ttk.Frame(main_container)
+        control_bar.pack(fill=tk.X, pady=(0, 10))
+
+        # Left side - action buttons
+        left_buttons = ttk.Frame(control_bar)
+        left_buttons.pack(side=tk.LEFT)
+
+        # Action buttons in one row
+        self.collect_hw_btn = ttk.Button(
+            left_buttons,
+            text="🔄 Collect Info",
+            command=lambda: self.collect_hardware_info(dialog),
+            style="Primary.TButton"
+        )
+        self.collect_hw_btn.pack(side=tk.LEFT, padx=(0, 5))
+
+        self.refresh_hw_btn = ttk.Button(
+            left_buttons,
+            text="🔄 Refresh",
+            command=lambda: self.collect_hardware_info(dialog),
+            state='disabled'
+        )
+        self.refresh_hw_btn.pack(side=tk.LEFT, padx=(0, 5))
+
+        # Export dropdown for hardware
+        self.hw_export_var = tk.StringVar(value="📤 Export")
+        self.hw_export_combo = ttk.Combobox(
+            left_buttons,
+            textvariable=self.hw_export_var,
+            values=["📤 Export", "📄 JSON", "📝 Text"],
+            state="disabled",
+            width=12,
+            style="TCombobox"
+        )
+        self.hw_export_combo.pack(side=tk.LEFT, padx=(0, 10))
+
+        def on_hw_export_select(event):
+            selection = self.hw_export_var.get()
+            if selection == "📄 JSON":
+                self.export_hardware_info('json')
+                self.hw_export_var.set("📤 Export")
+            elif selection == "📝 Text":
+                self.export_hardware_info('text')
+                self.hw_export_var.set("📤 Export")
+
+        self.hw_export_combo.bind("<<ComboboxSelected>>", on_hw_export_select)
+
+        # Right side - status and progress
+        right_status = ttk.Frame(control_bar)
+        right_status.pack(side=tk.RIGHT)
 
         # Status label
         self.hw_status_label = ttk.Label(
-            header_frame,
-            text="Click 'Collect Hardware Info' to scan your system",
-            font=("Arial", 9)
+            right_status,
+            text="Collecting hardware information..."
         )
-        self.hw_status_label.pack(side=tk.RIGHT)
+        self.hw_status_label.pack(side=tk.LEFT, padx=(0, 10))
 
-        # Button frame
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=(0, 10))
-
-        # Collect info button
-        self.collect_hw_btn = ttk.Button(
-            button_frame,
-            text="🔄 Collect Hardware Info",
-            command=lambda: self.collect_hardware_info(dialog),
-            width=25
+        # Progress bar (initially hidden)
+        self.hw_progress = ttk.Progressbar(
+            right_status,
+            mode='determinate',
+            length=150
         )
-        self.collect_hw_btn.pack(side=tk.LEFT, padx=(0, 10))
 
-        # Refresh button
-        self.refresh_hw_btn = ttk.Button(
-            button_frame,
-            text="🔄 Refresh",
-            command=lambda: self.collect_hardware_info(dialog),
-            state='disabled',
-            width=15
-        )
-        self.refresh_hw_btn.pack(side=tk.LEFT, padx=(0, 10))
-
-        # Export buttons
-        self.export_json_btn = ttk.Button(
-            button_frame,
-            text="📄 Export JSON",
-            command=lambda: self.export_hardware_info('json'),
-            state='disabled',
-            width=15
-        )
-        self.export_json_btn.pack(side=tk.LEFT, padx=(0, 5))
-
-        self.export_txt_btn = ttk.Button(
-            button_frame,
-            text="📝 Export Text",
-            command=lambda: self.export_hardware_info('text'),
-            state='disabled',
-            width=15
-        )
-        self.export_txt_btn.pack(side=tk.LEFT)
-
-        # Create scrollable content area
-        content_frame = ttk.Frame(main_frame)
-        content_frame.pack(fill=tk.BOTH, expand=True)
+        # Hardware information display area
+        content_frame = ttk.Frame(main_container)
+        content_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
         # Create scrollable frame with scrollbar
-        canvas = tk.Canvas(content_frame)
+        canvas = tk.Canvas(content_frame, highlightthickness=0, background=self.colors["background"])
         scrollbar = ttk.Scrollbar(content_frame, orient="vertical", command=canvas.yview)
         self.hw_scrollable_frame = ttk.Frame(canvas)
 
@@ -6295,15 +6840,13 @@ Disabling Hyper-V will:
         # Initial message
         initial_label = ttk.Label(
             self.hw_scrollable_frame,
-            text="Hardware information will appear here after collection.\n\nClick 'Collect Hardware Info' to start scanning your system.",
-            font=("Arial", 11),
-            justify=tk.CENTER,
-            foreground="gray"
+            text="Collecting hardware information...\n\nPlease wait while we scan your system.",
+            justify=tk.CENTER
         )
         initial_label.pack(expand=True, pady=50)
 
         # Close button
-        close_frame = ttk.Frame(main_frame)
+        close_frame = ttk.Frame(main_container)
         close_frame.pack(fill=tk.X, pady=(10, 0))
 
         close_btn = ttk.Button(
@@ -6314,15 +6857,14 @@ Disabling Hyper-V will:
         close_btn.pack(side=tk.RIGHT)
 
         # Automatically start collecting hardware info
-        dialog.after(100, lambda: self.collect_hardware_info(dialog))
+        dialog.after(500, lambda: self.collect_hardware_info(dialog))
 
     def collect_hardware_info(self, dialog):
         """Collect hardware information in background thread."""
         # Disable buttons during collection
         self.collect_hw_btn.config(state='disabled', text="🔄 Collecting...")
         self.refresh_hw_btn.config(state='disabled')
-        self.export_json_btn.config(state='disabled')
-        self.export_txt_btn.config(state='disabled')
+        self.hw_export_combo.config(state='disabled')
 
         # Show progress bar
         self.hw_progress.pack(side=tk.RIGHT, padx=(10, 0))
@@ -6371,10 +6913,9 @@ Disabling Hyper-V will:
             self.display_hardware_info(data)
 
             # Enable buttons
-            self.collect_hw_btn.config(state='normal', text="🔄 Collect Hardware Info")
+            self.collect_hw_btn.config(state='normal', text="🔄 Collect Info")
             self.refresh_hw_btn.config(state='normal')
-            self.export_json_btn.config(state='normal')
-            self.export_txt_btn.config(state='normal')
+            self.hw_export_combo.config(state='readonly')
         else:
             self.hw_status_label.config(text="Failed to collect hardware information")
 
@@ -6672,150 +7213,166 @@ Disabling Hyper-V will:
 
     def show_startup_manager(self):
         """Show Startup Manager dialog."""
-        # Create dialog
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Startup Manager")
-        dialog.geometry("1000x700")
-        dialog.minsize(900, 600)
-        dialog.transient(self.root)
-        dialog.grab_set()
-        self.center_window(dialog)
-
-        # Create main frame with padding
-        main_frame = ttk.Frame(dialog, padding=10)
-        main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Header
-        header_frame = ttk.Frame(main_frame)
-        header_frame.pack(fill=tk.X, pady=(0, 10))
-
-        header_label = ttk.Label(
-            header_frame,
-            text="🚀 Startup Manager - All Programs",
-            font=("Arial", 16, "bold")
-        )
-        header_label.pack(side=tk.LEFT)
-
-        # Progress bar (initially hidden)
-        self.startup_progress = ttk.Progressbar(
-            header_frame,
-            mode='determinate',
-            length=200
+        # Create modern dialog
+        dialog = self.create_modern_dialog(
+            self.root,
+            "Startup Manager",
+            width=1200,
+            height=700,
+            min_width=1100,
+            min_height=600
         )
 
-        # Status label
-        self.startup_status_label = ttk.Label(
-            header_frame,
-            text="Click 'Scan Startup Programs' to analyze all startup programs",
-            font=("Arial", 9)
-        )
-        self.startup_status_label.pack(side=tk.RIGHT)
+        # Create main container
+        main_container = ttk.Frame(dialog)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Button frame
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=(0, 10))
+        # Create clean header
+        self.create_modern_header(
+            main_container,
+            "Startup Manager",
+            icon="🚀"
+        )
+
+        # Top control bar - all buttons in one line
+        control_bar = ttk.Frame(main_container)
+        control_bar.pack(fill=tk.X, pady=(0, 10))
+
+        # Left side - action buttons
+        left_buttons = ttk.Frame(control_bar)
+        left_buttons.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        # Primary action buttons in one row
+        action_buttons = ttk.Frame(left_buttons)
+        action_buttons.pack(side=tk.LEFT, padx=(0, 10))
 
         # Scan button
         self.scan_startup_btn = ttk.Button(
-            button_frame,
-            text="🔄 Scan Startup Programs",
+            action_buttons,
+            text="🔄 Scan",
             command=lambda: self.scan_startup_programs(dialog),
-            width=25
+            style="Primary.TButton"
         )
-        self.scan_startup_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.scan_startup_btn.pack(side=tk.LEFT, padx=(0, 5))
 
         # Refresh button
         self.refresh_startup_btn = ttk.Button(
-            button_frame,
+            action_buttons,
             text="🔄 Refresh",
             command=lambda: self.scan_startup_programs(dialog),
             state='disabled',
-            width=15
+            style="Primary.TButton"
         )
-        self.refresh_startup_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.refresh_startup_btn.pack(side=tk.LEFT, padx=(0, 5))
 
         # Backup button
         self.backup_startup_btn = ttk.Button(
-            button_frame,
-            text="💾 Create Backup",
+            action_buttons,
+            text="💾 Backup",
             command=self.create_startup_backup,
             state='disabled',
-            width=15
+            style="Primary.TButton"
         )
-        self.backup_startup_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.backup_startup_btn.pack(side=tk.LEFT, padx=(0, 5))
 
-        # Export buttons
-        self.export_startup_json_btn = ttk.Button(
-            button_frame,
-            text="📄 Export JSON",
-            command=lambda: self.export_startup_config('json'),
-            state='disabled',
-            width=15
+        # Export dropdown for startup
+        self.startup_export_var = tk.StringVar(value="📤 Export")
+        self.startup_export_combo = ttk.Combobox(
+            action_buttons,
+            textvariable=self.startup_export_var,
+            values=["📤 Export", "📄 JSON", "📝 Text"],
+            state="disabled",
+            width=12,
+            style="TCombobox"
         )
-        self.export_startup_json_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.startup_export_combo.pack(side=tk.LEFT, padx=(0, 10))
 
-        self.export_startup_txt_btn = ttk.Button(
-            button_frame,
-            text="📝 Export Text",
-            command=lambda: self.export_startup_config('text'),
-            state='disabled',
-            width=15
-        )
-        self.export_startup_txt_btn.pack(side=tk.LEFT)
+        def on_startup_export_select(event):
+            selection = self.startup_export_var.get()
+            if selection == "📄 JSON":
+                self.export_startup_config('json')
+                self.startup_export_var.set("📤 Export")
+            elif selection == "📝 Text":
+                self.export_startup_config('text')
+                self.startup_export_var.set("📤 Export")
 
-        # Filter and search frame
-        filter_frame = ttk.Frame(main_frame)
-        filter_frame.pack(fill=tk.X, pady=(0, 10))
+        self.startup_export_combo.bind("<<ComboboxSelected>>", on_startup_export_select)
+
+        # Right side - search and filters
+        right_controls = ttk.Frame(control_bar)
+        right_controls.pack(side=tk.RIGHT)
 
         # Search
-        ttk.Label(filter_frame, text="Search:", font=("Arial", 9)).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Label(right_controls, text="Search:").pack(side=tk.LEFT, padx=(0, 5))
         self.startup_search_var = tk.StringVar()
-        self.startup_search_entry = ttk.Entry(filter_frame, textvariable=self.startup_search_var, width=30)
-        self.startup_search_entry.pack(side=tk.LEFT, padx=(0, 20))
+        self.startup_search_entry = ttk.Entry(right_controls, textvariable=self.startup_search_var, width=20)
+        self.startup_search_entry.pack(side=tk.LEFT, padx=(0, 10))
 
         # Impact filter
-        ttk.Label(filter_frame, text="Impact:", font=("Arial", 9)).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Label(right_controls, text="Impact:").pack(side=tk.LEFT, padx=(0, 5))
         self.startup_impact_filter = tk.StringVar(value="All")
-        impact_combo = ttk.Combobox(filter_frame, textvariable=self.startup_impact_filter,
-                                   values=["All", "High", "Medium", "Low", "Unknown"],
-                                   state="readonly", width=10)
-        impact_combo.pack(side=tk.LEFT, padx=(0, 20))
+        impact_combo = ttk.Combobox(right_controls, textvariable=self.startup_impact_filter,
+                                   values=["All", "High", "Medium", "Low", "Unknown"], state="readonly", width=8)
+        impact_combo.pack(side=tk.LEFT, padx=(0, 10))
 
         # Location filter
-        ttk.Label(filter_frame, text="Location:", font=("Arial", 9)).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Label(right_controls, text="Location:").pack(side=tk.LEFT, padx=(0, 5))
         self.startup_location_filter = tk.StringVar(value="All")
-        location_combo = ttk.Combobox(filter_frame, textvariable=self.startup_location_filter,
-                                     values=["All"], state="readonly", width=15)
+        location_combo = ttk.Combobox(right_controls, textvariable=self.startup_location_filter,
+                                     values=["All"], state="readonly", width=10)
         location_combo.pack(side=tk.LEFT)
 
         # Store filter comboboxes for later updates
         self.startup_impact_combo = impact_combo
         self.startup_location_combo = location_combo
 
-        # Create treeview for startup items
-        tree_frame = ttk.Frame(main_frame)
-        tree_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        # Status bar
+        status_bar = ttk.Frame(main_container)
+        status_bar.pack(fill=tk.X, pady=(0, 10))
+
+        # Status label
+        self.startup_status_label = ttk.Label(
+            status_bar,
+            text="Click 'Scan' to analyze startup programs"
+        )
+        self.startup_status_label.pack(side=tk.LEFT)
+
+        # Progress bar (initially hidden)
+        self.startup_progress = ttk.Progressbar(
+            status_bar,
+            mode='determinate',
+            length=150
+        )
+
+        # Boot time estimation
+        self.boot_time_label = ttk.Label(
+            status_bar,
+            text="Boot time improvement: 0s"
+        )
+        self.boot_time_label.pack(side=tk.RIGHT)
+
+        # Startup programs table
+        tree_frame = ttk.Frame(main_container)
+        tree_frame.pack(fill=tk.BOTH, expand=True)
 
         # Define columns
-        columns = ("select", "name", "status", "impact", "location", "publisher", "description")
+        columns = ("number", "name", "status", "impact", "location", "publisher")
         self.startup_tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=15)
 
         # Define column headings and widths
-        self.startup_tree.heading("select", text="☑")
+        self.startup_tree.heading("number", text="#")
         self.startup_tree.heading("name", text="Program Name")
         self.startup_tree.heading("status", text="Status")
         self.startup_tree.heading("impact", text="Impact")
         self.startup_tree.heading("location", text="Location")
         self.startup_tree.heading("publisher", text="Publisher")
-        self.startup_tree.heading("description", text="Description")
 
-        self.startup_tree.column("select", width=50, minwidth=50)
-        self.startup_tree.column("name", width=200, minwidth=150)
-        self.startup_tree.column("status", width=80, minwidth=80)
-        self.startup_tree.column("impact", width=80, minwidth=80)
-        self.startup_tree.column("location", width=120, minwidth=100)
-        self.startup_tree.column("publisher", width=150, minwidth=100)
-        self.startup_tree.column("description", width=200, minwidth=150)
+        self.startup_tree.column("number", width=50, minwidth=50, anchor=tk.CENTER)
+        self.startup_tree.column("name", width=300, minwidth=250)
+        self.startup_tree.column("status", width=100, minwidth=80, anchor=tk.CENTER)
+        self.startup_tree.column("impact", width=100, minwidth=80, anchor=tk.CENTER)
+        self.startup_tree.column("location", width=200, minwidth=150)
+        self.startup_tree.column("publisher", width=200, minwidth=150)
 
         # Add scrollbars
         v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.startup_tree.yview)
@@ -6841,38 +7398,12 @@ Disabling Hyper-V will:
         self.startup_impact_filter.trace("w", lambda *args: self.filter_startup_items(dialog))
         self.startup_location_filter.trace("w", lambda *args: self.filter_startup_items(dialog))
 
-        # Control buttons frame
-        control_frame = ttk.Frame(main_frame)
-        control_frame.pack(fill=tk.X, pady=(10, 0))
-
-        # Bulk operation buttons
-        self.enable_selected_btn = ttk.Button(
-            control_frame,
-            text="✅ Enable Selected",
-            command=self.enable_selected_startup_items,
-            state='disabled'
-        )
-        self.enable_selected_btn.pack(side=tk.LEFT, padx=(0, 10))
-
-        self.disable_selected_btn = ttk.Button(
-            control_frame,
-            text="❌ Disable Selected",
-            command=self.disable_selected_startup_items,
-            state='disabled'
-        )
-        self.disable_selected_btn.pack(side=tk.LEFT, padx=(0, 20))
-
-        # Boot time estimation
-        self.boot_time_label = ttk.Label(
-            control_frame,
-            text="Estimated boot time improvement: 0 seconds",
-            font=("Arial", 9)
-        )
-        self.boot_time_label.pack(side=tk.LEFT, padx=(0, 20))
-
         # Close button
+        close_frame = ttk.Frame(main_container)
+        close_frame.pack(fill=tk.X, pady=(10, 0))
+
         close_btn = ttk.Button(
-            control_frame,
+            close_frame,
             text="Close",
             command=dialog.destroy
         )
@@ -6885,10 +7416,10 @@ Disabling Hyper-V will:
         # Initial message
         initial_label = ttk.Label(
             tree_frame,
-            text="All startup programs will appear here after scanning.\n\nClick 'Scan Startup Programs' to analyze your complete startup configuration.\n\nCritical Windows services are protected but other programs can be safely managed.",
+            text="All startup programs will appear here after scanning.\n\nClick 'Scan' to analyze your complete startup configuration.\n\nCritical Windows services are protected but other programs can be safely managed.",
             font=("Arial", 11),
             justify=tk.CENTER,
-            foreground="gray"
+            foreground=self.colors["text_secondary"]
         )
         initial_label.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
@@ -6904,8 +7435,7 @@ Disabling Hyper-V will:
         self.scan_startup_btn.config(state='disabled', text="🔄 Scanning...")
         self.refresh_startup_btn.config(state='disabled')
         self.backup_startup_btn.config(state='disabled')
-        self.export_startup_json_btn.config(state='disabled')
-        self.export_startup_txt_btn.config(state='disabled')
+        self.startup_export_combo.config(state='disabled')
 
         # Show progress bar
         self.startup_progress.pack(side=tk.RIGHT, padx=(10, 0))
@@ -6915,15 +7445,37 @@ Disabling Hyper-V will:
         for item in self.startup_tree.get_children():
             self.startup_tree.delete(item)
 
-        # Show scanning message
-        scanning_label = ttk.Label(
-            self.startup_tree.master,
-            text="🔄 Scanning all startup programs...\n\nAnalyzing Registry, Startup folders, Services, and Tasks.\nOnly critical Windows services are excluded for safety.",
-            font=("Arial", 11),
+        # Create progress frame
+        progress_frame = ttk.Frame(self.startup_tree.master)
+        progress_frame.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W), padx=50, pady=50)
+
+        # Progress label
+        self.progress_label = ttk.Label(
+            progress_frame,
+            text="Initializing scan...",
+            font=("Arial", 12),
             justify=tk.CENTER,
-            foreground="blue"
+            foreground=self.colors["text_primary"]
         )
-        scanning_label.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        self.progress_label.pack(pady=(0, 20))
+
+        # Progress bar
+        self.progress_bar = ttk.Progressbar(
+            progress_frame,
+            mode='determinate',
+            length=400,
+            style="Primary.Horizontal.TProgressbar"
+        )
+        self.progress_bar.pack(pady=(0, 10))
+
+        # Progress percentage
+        self.progress_percent = ttk.Label(
+            progress_frame,
+            text="0%",
+            font=("Arial", 10),
+            foreground=self.colors["text_secondary"]
+        )
+        self.progress_percent.pack()
 
         # Progress callback
         def progress_callback(message, percentage):
@@ -6945,25 +7497,34 @@ Disabling Hyper-V will:
 
     def update_startup_progress(self, message, percentage):
         """Update progress bar and status."""
-        self.startup_status_label.config(text=message)
-        self.startup_progress.config(value=percentage)
+        try:
+            if hasattr(self, 'progress_label'):
+                self.progress_label.config(text=message)
+            if hasattr(self, 'progress_bar'):
+                self.progress_bar['value'] = percentage
+            if hasattr(self, 'progress_percent'):
+                self.progress_percent.config(text=f"{percentage}%")
+        except Exception:
+            pass  # Ignore errors if widgets don't exist
 
     def startup_scan_complete(self, dialog, success, data):
         """Handle completion of startup scan."""
-        # Hide progress bar
-        self.startup_progress.pack_forget()
+        # Hide progress elements
+        try:
+            if hasattr(self, 'progress_label') and self.progress_label.master:
+                self.progress_label.master.destroy()
+        except Exception:
+            pass
 
         if success:
-            self.startup_status_label.config(text=f"Found {len(data)} startup programs")
             self.startup_items = data
             self.display_startup_items()
 
             # Enable buttons
-            self.scan_startup_btn.config(state='normal', text="🔄 Scan Startup Programs")
+            self.scan_startup_btn.config(state='normal', text="🔄 Scan")
             self.refresh_startup_btn.config(state='normal')
             self.backup_startup_btn.config(state='normal')
-            self.export_startup_json_btn.config(state='normal')
-            self.export_startup_txt_btn.config(state='normal')
+            self.startup_export_combo.config(state='readonly')
 
             # Update filter options
             self.update_startup_filter_options()
@@ -6999,9 +7560,9 @@ Disabling Hyper-V will:
                 widget.destroy()
 
         # Add startup items to treeview
-        for item in self.startup_items:
-            # Determine status display
-            status = "Enabled" if item.enabled else "Disabled"
+        for index, item in enumerate(self.startup_items, 1):
+            # Determine status display (reversed to match Task Manager)
+            status = "Disabled" if item.enabled else "Enabled"
 
             # Color code impact
             impact_display = item.impact
@@ -7021,24 +7582,23 @@ Disabling Hyper-V will:
 
             # Insert item
             item_id = self.startup_tree.insert("", tk.END, values=(
-                "☐",  # Checkbox placeholder
+                str(index),  # Row number
                 name_display,
                 status,
                 impact_display,
                 item.location,
-                item.publisher or "Unknown",
-                item.description or "No description"
+                item.publisher or "Unknown"
             ))
 
-            # Apply red color to disabled items
-            if not item.enabled:
+            # Apply red color to disabled items (reversed logic for display)
+            if item.enabled:  # If internally enabled, show as "Disabled" in red
                 self.startup_tree.set(item_id, "status", "Disabled")
                 # Configure red text for disabled items
                 self.startup_tree.item(item_id, tags=("disabled",))
-            else:
+            else:  # If internally disabled, show as "Enabled" in normal color
                 self.startup_tree.item(item_id, tags=("enabled",))
 
-            # Store item reference
+            # Store item reference for operations
             self.selected_startup_items[item_id] = {'item': item, 'selected': False}
 
     def update_startup_filter_options(self):
@@ -7065,6 +7625,7 @@ Disabling Hyper-V will:
 
         # Filter and display items
         filtered_count = 0
+        display_index = 1
         for item in self.startup_items:
             # Apply filters
             if search_text and search_text not in item.name.lower() and search_text not in (item.description or "").lower():
@@ -7076,8 +7637,8 @@ Disabling Hyper-V will:
             if location_filter != "All" and item.location != location_filter:
                 continue
 
-            # Display item
-            status = "Enabled" if item.enabled else "Disabled"
+            # Display item (reversed to match Task Manager)
+            status = "Disabled" if item.enabled else "Enabled"
 
             impact_display = item.impact
             if item.impact == "High":
@@ -7094,28 +7655,25 @@ Disabling Hyper-V will:
                 name_display = f"🛡️ {item.name}"
 
             item_id = self.startup_tree.insert("", tk.END, values=(
-                "☐",
+                str(display_index),
                 name_display,
                 status,
                 impact_display,
                 item.location,
-                item.publisher or "Unknown",
-                item.description or "No description"
+                item.publisher or "Unknown"
             ))
 
-            # Apply color tags
-            if not item.enabled:
+            # Apply color tags (reversed logic for display)
+            if item.enabled:  # If internally enabled, show as "Disabled" in red
                 self.startup_tree.item(item_id, tags=("disabled",))
-            else:
+            else:  # If internally disabled, show as "Enabled" in normal color
                 self.startup_tree.item(item_id, tags=("enabled",))
 
-            # Restore selection state if it exists
-            if item_id in self.selected_startup_items:
-                self.selected_startup_items[item_id]['item'] = item
-            else:
-                self.selected_startup_items[item_id] = {'item': item, 'selected': False}
+            # Store item reference for operations
+            self.selected_startup_items[item_id] = {'item': item, 'selected': False}
 
             filtered_count += 1
+            display_index += 1
 
         # Update status
         if filtered_count != len(self.startup_items):
@@ -7132,13 +7690,8 @@ Disabling Hyper-V will:
         if not item_id:
             return
 
-        column = self.startup_tree.identify_column(event.x)
-
-        if column == "#1":  # Select column
-            self.toggle_startup_item_selection(item_id)
-        else:
-            # Toggle enable/disable
-            self.toggle_startup_item_status(item_id)
+        # Toggle enable/disable on any column click
+        self.toggle_startup_item_status(item_id)
 
     def toggle_startup_item_selection(self, item_id):
         """Toggle selection state of startup item."""
@@ -7183,21 +7736,20 @@ Disabling Hyper-V will:
                 action = "enabled"
 
             if success:
-                # Update display
+                # The startup_manager methods should have already updated the item.enabled state
+                # Just refresh the display to show the new state
                 self.refresh_startup_item_display(item_id, item)
-                messagebox.showinfo("Success", f"Successfully {action} '{item.name}'\n\nThe change will be reflected after the next system restart.")
 
                 # Update boot time estimation
                 self.update_boot_time_estimation()
-            else:
-                messagebox.showerror("Error", f"Failed to {action.replace('d', '')} '{item.name}':\n\n{message}")
+            # Remove error messages - no feedback for successful operations
 
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred while toggling '{item.name}':\n\n{str(e)}")
 
     def refresh_startup_item_display(self, item_id, item):
         """Refresh the display of a single startup item."""
-        status = "Enabled" if item.enabled else "Disabled"
+        status = "Disabled" if item.enabled else "Enabled"
 
         impact_display = item.impact
         if item.impact == "High":
@@ -7213,25 +7765,24 @@ Disabling Hyper-V will:
         if item.is_system_critical:
             name_display = f"🛡️ {item.name}"
 
-        # Get current selection state
-        selected = self.selected_startup_items[item_id]['selected']
-        checkbox = "☑" if selected else "☐"
+        # Get current values to preserve the number
+        current_values = self.startup_tree.item(item_id, "values")
+        row_number = current_values[0] if current_values else "1"
 
         # Update values
         self.startup_tree.item(item_id, values=(
-            checkbox,
+            row_number,
             name_display,
             status,
             impact_display,
             item.location,
-            item.publisher or "Unknown",
-            item.description or "No description"
+            item.publisher or "Unknown"
         ))
 
-        # Apply color tags
-        if not item.enabled:
+        # Apply color tags (reversed logic for display)
+        if item.enabled:  # If internally enabled, show as "Disabled" in red
             self.startup_tree.item(item_id, tags=("disabled",))
-        else:
+        else:  # If internally disabled, show as "Enabled" in normal color
             self.startup_tree.item(item_id, tags=("enabled",))
 
     def update_bulk_button_states(self):
@@ -7275,14 +7826,19 @@ Disabling Hyper-V will:
                 else:
                     error_messages.append(f"• {name}: {message}")
 
-            # Update display
-            self.display_startup_items()
+            # Update display for each affected item
+            for name, success, message in results:
+                if success:
+                    # Find and update the specific item
+                    for item_id, data in self.selected_startup_items.items():
+                        if data['item'].name == name:
+                            self.refresh_startup_item_display(item_id, data['item'])
+                            break
+
             self.update_boot_time_estimation()
 
-            # Show results
-            if success_count == len(selected_items):
-                messagebox.showinfo("Success", f"Successfully enabled {success_count} startup programs.\n\nChanges will take effect after the next system restart.")
-            else:
+            # Show results only if there were errors
+            if success_count < len(selected_items):
                 error_text = "\n".join(error_messages[:5])  # Show first 5 errors
                 if len(error_messages) > 5:
                     error_text += f"\n... and {len(error_messages) - 5} more errors"
@@ -7346,19 +7902,19 @@ Disabling Hyper-V will:
                 else:
                     error_messages.append(f"• {name}: {message}")
 
-            # Update display
-            self.display_startup_items()
+            # Update display for each affected item
+            for name, success, message in results:
+                if success:
+                    # Find and update the specific item
+                    for item_id, data in self.selected_startup_items.items():
+                        if data['item'].name == name:
+                            self.refresh_startup_item_display(item_id, data['item'])
+                            break
+
             self.update_boot_time_estimation()
 
-            # Show results
-            if success_count == len(selected_items):
-                messagebox.showinfo(
-                    "Success",
-                    f"Successfully disabled {success_count} startup programs.\n\n"
-                    f"Estimated boot time improvement: {improvement} seconds\n\n"
-                    f"Changes will take effect after the next system restart."
-                )
-            else:
+            # Show results only if there were errors
+            if success_count < len(selected_items):
                 error_text = "\n".join(error_messages[:5])  # Show first 5 errors
                 if len(error_messages) > 5:
                     error_text += f"\n... and {len(error_messages) - 5} more errors"
@@ -7387,13 +7943,13 @@ Disabling Hyper-V will:
             else:
                 self.boot_time_label.config(
                     text="Estimated boot time improvement: 0 seconds",
-                    foreground="gray"
+                    foreground=self.colors["text_secondary"]
                 )
 
         except Exception:
             self.boot_time_label.config(
                 text="Boot time estimation unavailable",
-                foreground="gray"
+                foreground=self.colors["text_secondary"]
             )
 
     def create_startup_backup(self):
