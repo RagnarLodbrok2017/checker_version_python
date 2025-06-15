@@ -5092,6 +5092,10 @@ Disabling Hyper-V will:
         )
         control_header.grid(row=0, column=0, sticky=tk.W, pady=(0, 15))
 
+        # Version Tools section - all version-related buttons in one area
+        version_label = ttk.Label(control_panel, text="Version Tools", style="Subtitle.TLabel")
+        version_label.grid(row=1, column=0, sticky=tk.W, pady=(0, 10))
+
         # Main action button
         self.refresh_btn = ttk.Button(
             control_panel,
@@ -5099,54 +5103,48 @@ Disabling Hyper-V will:
             command=self.start_version_check,
             style="Primary.TButton"
         )
-        self.refresh_btn.grid(row=1, column=0, pady=(0, 15), sticky=tk.W+tk.E, ipady=5)
+        self.refresh_btn.grid(row=2, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=5)
 
-        ttk.Separator(control_panel, orient='horizontal').grid(row=2, column=0, sticky=tk.W+tk.E, pady=15)
-        
-        # Export section
-        export_label = ttk.Label(control_panel, text="Export Results", style="Subtitle.TLabel")
-        export_label.grid(row=3, column=0, sticky=tk.W, pady=(0, 10))
-
-        export_frame = ttk.Frame(control_panel, style="Card.TFrame")
-        export_frame.grid(row=4, column=0, sticky=tk.W+tk.E, pady=(0, 5))
-        export_frame.columnconfigure(0, weight=1)
-        export_frame.columnconfigure(1, weight=1)
-        
-        self.export_json_btn = ttk.Button(
-            export_frame, 
-            text="📊 JSON", 
-            command=self.export_json,
-            state='disabled',
-            style="Secondary.TButton"
-        )
-        self.export_json_btn.grid(row=0, column=0, padx=(0, 2), sticky=tk.W+tk.E)
-        
-        self.export_txt_btn = ttk.Button(
-            export_frame,
-            text="📝 Text",
-            command=self.export_text,
-            state='disabled',
-            style="Secondary.TButton"
-        )
-        self.export_txt_btn.grid(row=0, column=1, padx=(2, 0), sticky=tk.W+tk.E)
-        
-        # Add import JSON button
-        self.import_json_btn = ttk.Button(
-            control_panel,
-            text="📥 Import JSON",
-            command=self.import_json,
-            style="Secondary.TButton"
-        )
-        self.import_json_btn.grid(row=5, column=0, pady=(5, 0), sticky=tk.W+tk.E, ipady=3)
-
-        # Add auto install packages button
+        # Auto install packages button
         self.auto_install_btn = ttk.Button(
             control_panel,
             text="🔄 Auto Install Packages",
             command=self.auto_install_from_backup,
             style="Primary.TButton"
         )
-        self.auto_install_btn.grid(row=6, column=0, pady=(5, 0), sticky=tk.W+tk.E, ipady=3)
+        self.auto_install_btn.grid(row=3, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
+
+        # Import JSON button
+        self.import_json_btn = ttk.Button(
+            control_panel,
+            text="📥 Import JSON",
+            command=self.import_json,
+            style="Primary.TButton"
+        )
+        self.import_json_btn.grid(row=4, column=0, pady=(0, 5), sticky=tk.W+tk.E, ipady=3)
+
+        # Export dropdown
+        self.export_var = tk.StringVar(value="📤 Export")
+        self.export_combo = ttk.Combobox(
+            control_panel,
+            textvariable=self.export_var,
+            values=["📤 Export", "📄 JSON", "📝 Text"],
+            state="disabled",
+            width=20,
+            style="TCombobox"
+        )
+        self.export_combo.grid(row=5, column=0, pady=(0, 5), sticky=tk.W+tk.E)
+        self.export_combo.bind("<<ComboboxSelected>>", self.on_export_selected)
+
+        # Install Selected Tool button (moved from Installation section)
+        self.install_selected_btn = ttk.Button(
+            control_panel,
+            text="📦 Install Selected Tool",
+            command=self.install_selected_tool,
+            state='disabled',
+            style="Action.TButton"
+        )
+        self.install_selected_btn.grid(row=6, column=0, pady=(0, 10), sticky=tk.W+tk.E, ipady=3)
 
         ttk.Separator(control_panel, orient='horizontal').grid(row=7, column=0, sticky=tk.W+tk.E, pady=15)
 
@@ -5203,24 +5201,9 @@ Disabling Hyper-V will:
         )
         self.startup_manager_btn.grid(row=14, column=0, pady=(0, 10), sticky=tk.W+tk.E, ipady=3)
 
-        ttk.Separator(control_panel, orient='horizontal').grid(row=15, column=0, sticky=tk.W+tk.E, pady=15)
-
-        # Installation section
-        install_label = ttk.Label(control_panel, text="Installation", style="Subtitle.TLabel")
-        install_label.grid(row=16, column=0, sticky=tk.W, pady=(0, 10))
-
-        self.install_selected_btn = ttk.Button(
-            control_panel,
-            text="📦 Install Selected Tool",
-            command=self.install_selected_tool,
-            state='disabled',
-            style="Action.TButton"
-        )
-        self.install_selected_btn.grid(row=17, column=0, pady=(0, 10), sticky=tk.W+tk.E, ipady=3)
-
         # Instructions card
         info_frame = ttk.Frame(control_panel, padding="10", style="Card.TFrame")
-        info_frame.grid(row=18, column=0, sticky=tk.W+tk.E, pady=(5, 0))
+        info_frame.grid(row=15, column=0, sticky=tk.W+tk.E, pady=(5, 0))
         info_frame.configure(borderwidth=1, relief="solid")
         
         # Instructions label with icon
@@ -5422,7 +5405,20 @@ Disabling Hyper-V will:
         finally:
             self.progress.stop()
             self.refresh_btn.config(state='normal')
-    
+            # Enable export buttons after version check
+            if hasattr(self, 'export_combo'):
+                self.export_combo.config(state='readonly')
+
+    def on_export_selected(self, event):
+        """Handle export dropdown selection."""
+        selection = self.export_var.get()
+        if selection == "📄 JSON":
+            self.export_json()
+        elif selection == "📝 Text":
+            self.export_text()
+        # Reset dropdown to default
+        self.export_var.set("📤 Export")
+
     def export_json(self):
         """Export results to JSON file."""
         if not self.results:

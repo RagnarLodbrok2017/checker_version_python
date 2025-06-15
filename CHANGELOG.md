@@ -441,6 +441,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Fixed "Already Disabled" Error**: Removed confusing status checks that prevented operations
   - **Silent Operations**: Enable/disable actions now work silently without unnecessary feedback
   - **Consistent Visual State**: Color coding matches the reversed status text display
+- **Version Check Export Fix**: Fixed non-working JSON and Text export buttons
+  - **Export Buttons Enabled**: Export buttons now properly enabled after version checking completes
+  - **Reorganized Layout**: Moved all version-related buttons to top section for better organization
+  - **Export Dropdown**: Replaced separate JSON/Text buttons with single "📤 Export" dropdown menu
+  - **Grouped Version Tools**: Check Versions, Auto Install Packages, Import JSON, and Export now grouped together
+  - **Improved Workflow**: All version checking functionality accessible from one organized section
+- **Layout Consistency Improvements**: Unified design and logical grouping
+  - **Import JSON Button**: Changed to Primary.TButton style to match Auto Install Packages
+  - **Install Selected Tool**: Moved from separate Installation section to Version Tools group
+  - **Complete Version Workflow**: Check → Import → Auto Install → Export → Install Selected all in one section
+  - **Eliminated Installation Section**: Removed redundant separate section for cleaner layout
+  - **Consistent Button Styling**: All primary version tools now use matching Primary.TButton style
 - Initial project structure with multiple language implementations
 - C# WinForms application for version checking
 - Python CLI version checker
